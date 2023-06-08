@@ -1,0 +1,23 @@
+local NODE_IPS = { '10.191.24.56', '10.191.24.4', '10.191.24.178' }
+local PORT = 11211
+
+function nodes_flat()
+    local srv = mcp.backend
+    local b = {}
+    for i=1,3 do
+        table.insert(b, srv('b' .. i, NODE_IPS[i], PORT))
+    end
+    return b
+end
+
+function nodes_args(a)
+    local srv = mcp.backend
+    local b = {}
+    for i=1,3 do
+        a.label = 'b' .. i
+        a.host = NODE_IPS[i]
+        a.port = PORT
+        table.insert(b, srv(a))
+    end
+    return b
+end

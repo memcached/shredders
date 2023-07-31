@@ -10,6 +10,18 @@ function nodes_flat()
     return b
 end
 
+-- generate the list of backends N times.
+function nodes_n(copies)
+    local srv = mcp.backend
+    local b = {}
+    for x=1,copies do
+        for i=1,3 do
+            table.insert(b, srv('b' .. x .. '-' .. i, NODE_IPS[i], PORT))
+        end
+    end
+    return b
+end
+
 function nodes_args(a)
     local srv = mcp.backend
     local b = {}

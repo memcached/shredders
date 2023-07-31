@@ -371,6 +371,37 @@ function perfrun_metaget(a)
     end
 end
 
+function perfrun_metaget_pipe(a)
+    local total_keys = a.limit
+    local pipes = a.pipes
+    local reqfacs = {}
+    local results = {}
+    for i=1,pipes do
+        table.insert(results, mcs.res_new())
+        table.insert(reqfacs, mcs.mg_factory("perf", "v"))
+    end
+    perfrun_init()
+
+    return function()
+        for i=1,pipes do
+            local num = math.random(total_keys)
+            mcs.write_factory(reqfacs[i], num)
+        end
+        mcs.flush()
+
+        for i=1,pipes do
+            local res = results[i]
+            mcs.read(res)
+            local status, elapsed = mcs.match(reqfacs[i], res)
+            if not status then
+                print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+            end
+
+            perfrun_bucket("mg", elapsed)
+        end
+    end
+end
+
 function perfrun_metaset(a)
     local total_keys = a.limit
     local size = a.vsize

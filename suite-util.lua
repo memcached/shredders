@@ -15,3 +15,8 @@ end
 function nodeips()
     return NODE_IPS
 end
+
+function dprint(...)
+    io.write(os.date("%c: "))
+    print(...)
+end

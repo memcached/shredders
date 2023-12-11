@@ -128,7 +128,7 @@ function test_p_flush_datanodes(thread)
 end
 
 function test_p_warm(thread, client)
-    print("=== warming ===")
+    dprint("=== warming ===")
     local c = test_p.tests[client].w
     if c == nil or #c == 0 then
         -- allow empty lists to skip any warming.
@@ -309,7 +309,7 @@ function run_stability_tests(tests, sets, threads, go_test)
                         warmers_run[p] = true
                     end
 
-                    print("=== test ===", suite .. "_" .. pfx .. "_" .. n)
+                    dprint("=== test ===", suite .. "_" .. pfx .. "_" .. n)
                     local args = test.a
                     args["prefix"] = prefix
                     if test["s"] then

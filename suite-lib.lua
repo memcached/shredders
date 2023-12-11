@@ -80,6 +80,7 @@ function _stat_sample(a)
         stats[mcs.res_statname(res)] = mcs.res_stat(res)
     end
 
+    dprint("=== stats ===")
     for _, s in pairs(a["stats"]) do
         if previous_stats[s] ~= nil then
             local count = stats[s] - previous_stats[s]
@@ -91,6 +92,7 @@ function _stat_sample(a)
             print("stat:", s, ": ", stats[s])
         end
     end
+    dprint("=== end stats ===")
 
     a.previous_stats = stats
 end
@@ -168,7 +170,7 @@ function timer_display(a)
 
     -- TODO: use out func to print all at once.
     return function()
-        print("=== timer ===")
+        dprint("=== timer ===")
         print("1us", timer_hist[1])
         print("10us", timer_hist[2])
         print("100us", timer_hist[3])
@@ -180,7 +182,7 @@ function timer_display(a)
         if timer_bounds ~= 0 then
             print("100ms+:", timer_bounds)
         end
-        print("=== end ===")
+        dprint("=== end ===")
 
         for i=1,3 do
             timer_hist[i] = 0

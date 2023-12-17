@@ -75,6 +75,10 @@ function config(a)
         print("[init] overriding performance clients list")
         o.clients = _split_arg(a["clients"])
     end
+    if a["api2"] ~= nil then
+        print("[init] running in api2 mode")
+        o.api2 = true
+    end
 
     local threads = {}
     for i=1,o.threads do
@@ -279,7 +283,11 @@ function test_stability(o)
         nodectrl("startdbg mc-node" .. i .. mc_args)
     end
     -- start proxy node with config
-    nodectrl("startdbg mc-proxy -m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/proxy-stability.lua")
+    if o.api2 then
+        nodectrl("startdbg mc-proxy -m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/proxy-stability-api2.lua")
+    else
+        nodectrl("startdbg mc-proxy -m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/proxy-stability.lua")
+    end
     os.execute("sleep 1") -- let the daemon start and listen.
 
     -- NOTE: don't like this.

@@ -10,20 +10,20 @@ local test_p_clients = { "lowclients", "lowpipe", "highclients", "lowgetset" }
 -- physically closer together.
 -- Also, a lot of these tests don't make sense for all value variations.
 local test_p_tests = {
-    lowclients = { a = { rate = 5000, cli = 20, cap = 500000, limit = KEY_LIMIT },
+    lowclients = { a = { rate = 50000, cli = 20, cap = 500000, limit = KEY_LIMIT },
         w = { { limit = KEY_LIMIT, vsize = 50, prefix = "perf" } },
         t = function(thr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true}, o)
     end, r = function(o)
-        o.rate = o.rate + 10000
+        o.rate = o.rate + 50000
         return o.rate
     end},
-    lowpipe = { a = { rate = 5000, cli = 20, pipes = 8, cap = 125000, limit = KEY_LIMIT },
+    lowpipe = { a = { rate = 50000, cli = 20, pipes = 8, cap = 250000, limit = KEY_LIMIT },
         w = { { limit = KEY_LIMIT, vsize = 50, prefix = "perf" } },
         t = function(thr, o)
             mcs.add(thr, { func = "perfrun_metaget_pipe", clients = o.cli, rate_limit = o.rate, init = true}, o)
     end, r = function(o)
-        o.rate = o.rate + 5000
+        o.rate = o.rate + 50000
         return o.rate
     end},
     highclients = { a = { rate = 10000, cli = 40, cap = 800000, limit = KEY_LIMIT },

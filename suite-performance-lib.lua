@@ -151,8 +151,12 @@ end
 
 function perfrun_metaget(a)
     local total_keys = a.limit
+    local pfx = "perf"
+    if a.prefix then
+        pfx = a.prefix
+    end
     local res = mcs.res_new()
-    local req = mcs.mg_factory("perf", "v")
+    local req = mcs.mg_factory(pfx, "v")
     -- NOTE: this ends up resetting the global values a bunch of times, but we
     -- need to ensure we do it once to clear any data from a previous run.
     -- All of the inits run before any actual test code so this is fine.

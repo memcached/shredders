@@ -25,7 +25,7 @@ function warm(a)
     end
 
     local numbers = {}
-        if shuffle then
+    if shuffle then
         for i=1,count do
             table.insert(numbers, i)
         end

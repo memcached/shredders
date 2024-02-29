@@ -88,19 +88,19 @@ function perfrun_stats_gather(a)
             for cmd, s in pairs(lstats) do
                 local timer_hist = s[PERFRUN_HIST]
                 local timer_mshist = s[PERFRUN_MSHIST]
-                print("=== timer " .. cmd .. " ===")
-                print("1us", timer_hist[1])
-                print("10us", timer_hist[2])
-                print("100us", timer_hist[3])
+                plog("TIMER", cmd)
+                plog("TIME", "1us", timer_hist[1])
+                plog("TIME", "10us", timer_hist[2])
+                plog("TIME", "100us", timer_hist[3])
                 for i=1,100 do
                     if timer_mshist[i] > 0 then
-                        print(i .. "ms", timer_mshist[i])
+                        plog("TIME", i .. "ms", timer_mshist[i])
                     end
                 end
                 if s[PERFRUN_OOB] ~= 0 then
-                    print("100ms+:", s[PERFRUN_OOB])
+                    plog("TIME", "100ms+:", s[PERFRUN_OOB])
                 end
-                print("=== end ===")
+                plog("ENDTIMER")
             end
 
             -- reset local stats cache.

@@ -16,11 +16,11 @@ function warm(a)
     end
     local c = mcs.client_new({})
     if c == nil then
-        print("ERROR: warmer failed to connect to host")
+        plog("LOG", "ERROR", "warmer failed to connect to host")
         return
     end
     if mcs.client_connect(c) == false then
-        print("ERROR: warmer failed to connect")
+        plog("LOG", "ERROR", "warmer failed to connect")
         return
     end
 
@@ -80,19 +80,21 @@ function _stat_sample(a)
         stats[mcs.res_statname(res)] = mcs.res_stat(res)
     end
 
-    dprint("=== stats ===")
+    plog("NEWSTATS", "COUNT")
     for _, s in pairs(a["stats"]) do
         if previous_stats[s] ~= nil then
             local count = stats[s] - previous_stats[s]
-            print("stat:", s, ": ", count)
+            plog("STAT", s, count)
         end
     end
+    plog("ENDSTATS")
+    plog("NEWSTATS", "TRACK")
     for _, s in pairs(a["track"]) do
         if stats[s] ~= nil then
-            print("stat:", s, ": ", stats[s])
+            plog("STAT:", s, stats[s])
         end
     end
-    dprint("=== end stats ===")
+    plog("ENDSTATS")
 
     a.previous_stats = stats
 end
@@ -170,19 +172,19 @@ function timer_display(a)
 
     -- TODO: use out func to print all at once.
     return function()
-        dprint("=== timer ===")
-        print("1us", timer_hist[1])
-        print("10us", timer_hist[2])
-        print("100us", timer_hist[3])
+        plog("TIMER")
+        plog("TIME", "1us", timer_hist[1])
+        plog("TIME", "10us", timer_hist[2])
+        plog("TIME", "100us", timer_hist[3])
         for i=1,100 do
             if timer_mshist[i] > 0 then
-                print(i .. "ms", timer_mshist[i])
+                plog("TIME", i .. "ms", timer_mshist[i])
             end
         end
         if timer_bounds ~= 0 then
-            print("100ms+:", timer_bounds)
+            plog("TIME", "100ms+:", timer_bounds)
         end
-        dprint("=== end ===")
+        plog("ENDTIMER")
 
         for i=1,3 do
             timer_hist[i] = 0

@@ -91,7 +91,7 @@ function _stat_sample(a)
     plog("NEWSTATS", "TRACK")
     for _, s in pairs(a["track"]) do
         if stats[s] ~= nil then
-            plog("STAT:", s, stats[s])
+            plog("STAT", s, stats[s])
         end
     end
     plog("ENDSTATS")

@@ -4,6 +4,7 @@ require("suite-performance-lib")
 require("suite-stability-lib")
 local test_s = require("suite-stability-tests")
 local test_p = require("suite-performance-tests")
+local test_ext = require("suite-extstore-tests")
 
 function help()
     local msg =[[
@@ -76,6 +77,11 @@ function config(a)
         print("[init] overriding performance clients list")
         o.clients = _split_arg(a["clients"])
     end
+    if a["extset"] ~= nil then
+        -- hope I can refactor these into a shared pattern soon...
+        print("[init] overriding extstore test list")
+        o.extset = _split_arg(a["extset"])
+    end
     if a["api2"] ~= nil then
         print("[init] running in api2 mode")
         o.api2 = true
@@ -98,11 +104,90 @@ function config(a)
     else
         test_stability(o)
         test_performance(o)
+        test_extstore(o)
     end
 end
 
 --
 -- TEST PLANS --
+--
+
+--
+-- extstore test runner
+--
+
+-- most code inherited/modified from the performance runner.
+function test_ext_start(config)
+    -- let the config define all of the arguments.
+    -- for some extstore tests we want to try less/more RAM, threads, etc.
+    nodectrl("start mc-extstore " .. config.s)
+    os.execute("sleep 2")
+end
+
+function test_ext_stop()
+    nodectrl("stop mc-extstore")
+    os.execute("sleep 8")
+end
+
+function test_ext_warm(thread, client)
+    plog("LOG", "INFO", "warming")
+    local c = client
+    if c == nil or #c == 0 then
+        -- allow empty lists to skip any warming.
+        return
+    end
+    for _, conf in ipairs(c) do
+        mcs.add_custom(thread, { func = "warm" }, conf)
+    end
+    mcs.shredder({thread})
+    plog("LOG", "INFO", "warming end")
+end
+
+function test_ext_run_test(o, test)
+    local testthr = o.testthr
+    local statthr = o.statsthr
+
+    -- TODO: really need to make add auto-track threads.
+    local allthr = {statthr}
+    for _, t in ipairs(testthr) do
+        table.insert(allthr, t)
+    end
+
+    local stats_arg = { stats = { "cmd_get", "cmd_set", "extstore_bytes_read", "extstore_objects_read", "extstore_objects_written" }, track = { "extstore_bytes_written", "extstore_bytes_fragmented", "extstore_bytes_used", "extstore_io_queue", "extstore_page_allocs", "extstore_page_reclaims", "extstore_page_evictions", "extstore_pages_free", "evictions" } }
+
+    -- copy the argument table since we modify it at runtime.
+    -- want to do this better but it does complicate the code a lot...
+    local a = shallow_copy(test.a)
+
+    test.t(testthr, a)
+    -- one set of funcs on each test thread that ships history
+    -- one func that reads the history and summarizes every second.
+    mcs.add(testthr, { func = "perfrun_stats_out", rate_limit = 1, clients = 1 })
+    mcs.add_custom(statthr, { func = "perfrun_stats_gather" }, { threads = o.threads })
+    mcs.add(statthr, { func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
+    -- TODO: give the ctx a true/false return via a command.
+    mcs.shredder(allthr, o.time)
+end
+
+function test_extstore(o)
+    if o.extset then
+        test_ext.testset = o.extset
+    end
+
+    for _, tconfig in ipairs(test_ext.testset) do
+        local t = test_ext.tests[tconfig]
+        test_ext_start(t)
+        -- run test
+        plog("START", tconfig)
+        test_ext_warm(o.warmthr, t.w)
+        test_ext_run_test(o, t)
+        plog("END")
+        test_ext_stop()
+    end
+end
+
+--
+-- performance test runner
 --
 
 function test_p_start_datanodes()
@@ -203,6 +288,10 @@ function test_performance(o)
         test_p_stop_proxy()
     end
 end
+
+--
+-- stability test runner
+--
 
 -- run through a series of full-load test scenarios
 function test_stability(o)

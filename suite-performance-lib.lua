@@ -182,9 +182,13 @@ function perfrun_metaget_pipe(a)
     local pipes = a.pipes
     local reqfacs = {}
     local results = {}
+    if a.prefix then
+        pfx = a.prefix
+    end
+
     for i=1,pipes do
         table.insert(results, mcs.res_new())
-        table.insert(reqfacs, mcs.mg_factory("perf", "v"))
+        table.insert(reqfacs, mcs.mg_factory(pfx, "v"))
     end
     perfrun_init()
 
@@ -211,8 +215,12 @@ end
 function perfrun_metaset(a)
     local total_keys = a.limit
     local size = a.vsize
+    local pfx = "perf"
+    if a.prefix then
+        pfx = a.prefix
+    end
     local res = mcs.res_new()
-    local req = mcs.ms_factory("perf", "")
+    local req = mcs.ms_factory(pfx, "")
     perfrun_init()
 
     return function()

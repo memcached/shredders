@@ -17,8 +17,8 @@ function nodeips()
 end
 
 function plog(...)
-    io.write(os.date("%c\t|\t"))
-    io.write(table.concat(arg, "\t|\t"))
+    io.write(os.date("%a %b %e %H:%M:%S | "))
+    io.write(table.concat({...}, " | "))
     io.write("\n")
 end
 

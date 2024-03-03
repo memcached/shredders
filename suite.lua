@@ -143,12 +143,16 @@ function test_ext_warm(thread, client)
     plog("LOG", "INFO", "warming end")
 end
 
+-- for extstore tests we pass the warm thread back into the main workload
+-- so we can make single threaded "writer" threads to emulate certain load
+-- patterns and to allow repeatable data loading in general.
 function test_ext_run_test(o, test)
     local testthr = o.testthr
     local statthr = o.statsthr
+    local warmthr = o.warmthr
 
     -- TODO: really need to make add auto-track threads.
-    local allthr = {statthr}
+    local allthr = {statthr, warmthr}
     for _, t in ipairs(testthr) do
         table.insert(allthr, t)
     end
@@ -159,11 +163,12 @@ function test_ext_run_test(o, test)
     -- want to do this better but it does complicate the code a lot...
     local a = shallow_copy(test.a)
 
-    test.t(testthr, a)
+    test.t(testthr, warmthr, a)
     -- one set of funcs on each test thread that ships history
     -- one func that reads the history and summarizes every second.
     mcs.add(testthr, { func = "perfrun_stats_out", rate_limit = 1, clients = 1 })
     mcs.add_custom(statthr, { func = "perfrun_stats_gather" }, { threads = o.threads })
+    -- specifically for tracking 'stats' counters
     mcs.add(statthr, { func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
     -- TODO: give the ctx a true/false return via a command.
     mcs.shredder(allthr, o.time)

@@ -52,6 +52,9 @@ function perf_warm(a)
                 mcs.sleep_millis(sleep)
             end
         end
+        if math.floor(i % (count / 10)) == 0 then
+            plog("LOG", "INFO", "warming pct", tostring(math.floor(i / count * 100)))
+        end
     end
 
     mcs.client_write(c, "mn\r\n")

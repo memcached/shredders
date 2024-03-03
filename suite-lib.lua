@@ -3,7 +3,7 @@
 --
 
 local FLUSH_AFTER <const> = 50000000
-function warm(a)
+function perf_warm(a)
     local count = a.limit
     local size = a.vsize
     local prefix = a.prefix
@@ -14,6 +14,7 @@ function warm(a)
     if a.flush_after then
         flush_after = a.flush_after
     end
+
     local c = mcs.client_new({})
     if c == nil then
         plog("LOG", "ERROR", "warmer failed to connect to host")

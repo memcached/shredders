@@ -20,11 +20,11 @@ local test_args = {
 
 local warmers = {
     main = function(pfx, t)
-        mcs.add_custom(t.w, { func = "warm" }, { limit = main_keys, prefix = pfx, vsize = 100 })
+        mcs.add_custom(t.w, { func = "stability_warm" }, { limit = main_keys, prefix = pfx, vsize = 100 })
         mcs.shredder({t.w})
     end,
     bwlimit = function(pfx, t)
-        mcs.add_custom(t.w, { func = "warm" }, { limit = bwlimit_keys, prefix = pfx, vsize = 800000 })
+        mcs.add_custom(t.w, { func = "stability_warm" }, { limit = bwlimit_keys, prefix = pfx, vsize = 800000 })
         mcs.shredder({t.w})
     end,
     fault = function(pfx)

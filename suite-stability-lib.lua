@@ -3,7 +3,7 @@
 --
 
 local FLUSH_AFTER <const> = 50000000
-function warm(a)
+function stability_warm(a)
     local count = a.limit
     local size = a.vsize
     local prefix = a.prefix

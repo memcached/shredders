@@ -225,7 +225,7 @@ function perfrun_metaset(a)
 
     return function()
         local num = math.random(total_keys)
-        mcs.write_factory(req, num, vsize)
+        mcs.write_factory(req, num, size)
         mcs.flush()
 
         mcs.read(res)

@@ -137,7 +137,7 @@ function test_ext_warm(thread, client)
         return
     end
     for _, conf in ipairs(c) do
-        mcs.add_custom(thread, { func = "warm" }, conf)
+        mcs.add_custom(thread, { func = "perf_warm" }, conf)
     end
     mcs.shredder({thread})
     plog("LOG", "INFO", "warming end")
@@ -225,7 +225,7 @@ function test_p_warm(thread, client)
         return
     end
     for _, conf in ipairs(c) do
-        mcs.add_custom(thread, { func = "warm" }, conf)
+        mcs.add_custom(thread, { func = "perf_warm" }, conf)
     end
     mcs.shredder({thread})
     plog("LOG", "INFO", "warming end")

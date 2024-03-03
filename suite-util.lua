@@ -20,6 +20,7 @@ function plog(...)
     io.write(os.date("%a %b %e %H:%M:%S | "))
     io.write(table.concat({...}, " | "))
     io.write("\n")
+    io.flush()
 end
 
 function shallow_copy(a)

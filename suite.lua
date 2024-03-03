@@ -167,6 +167,10 @@ function test_ext_run_test(o, test)
     mcs.add(statthr, { func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
     -- TODO: give the ctx a true/false return via a command.
     mcs.shredder(allthr, o.time)
+
+    -- grab stats snapshot before the server is stopped
+    mcs.add_custom(statthr, { func = "full_stats" }, {})
+    mcs.shredder({statthr})
 end
 
 function test_extstore(o)

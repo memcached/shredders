@@ -38,7 +38,7 @@ local tests = {
 }
 
 local test_list = {
-    "example",
+    "basic",
 }
 
 return {

@@ -112,6 +112,38 @@ function stat_sample(a)
     _stat_sample(a)
 end
 
+-- uses client mode so we can exit a shredder run when complete.
+function full_stats(a)
+    local subcmd = a.sub
+    local c = mcs.client_new({})
+    if c == nil then
+        plog("LOG", "ERROR", "stats dumper failed to connect")
+        return
+    end
+    if mcs.client_connect(c) == false then
+        plog("LOG", "ERROR", "stats dumper failed to connect")
+        return
+    end
+
+    if subcmd ~= nil then
+        mcs.client_write(c, "stats " .. subcmd .. "\r\n")
+    else
+        mcs.client_write(c, "stats\r\n")
+    end
+    mcs.client_flush(c)
+
+    local res = mcs.res_new()
+    plog("FULLSTATS")
+    while true do
+        mcs.client_read(c, res)
+        if mcs.res_startswith(res, "END") then
+            break
+        end
+        plog("STAT", mcs.res_statname(res), mcs.res_stat(res))
+    end
+    plog("ENDSTATS")
+end
+
 --
 -- STATISTICS --
 --

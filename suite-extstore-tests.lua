@@ -64,9 +64,6 @@ local tests = {
         },
         t = function(thr, wthr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
-            -- we want to slow this down compared to the initial load but
-            -- should still be reasonable.
-            -- the shuffle prevents "perfect" reloading from emptying pages
             mcs.add_custom(wthr, { func = "perf_warm" }, {
                 limit = reload50_item_count,
                 vsize = basic_item_size,
@@ -98,9 +95,6 @@ local tests = {
         },
         t = function(thr, wthr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
-            -- we want to slow this down compared to the initial load but
-            -- should still be reasonable.
-            -- the shuffle prevents "perfect" reloading from emptying pages
             mcs.add_custom(wthr, { func = "perf_warm" }, {
                 limit = reload75_item_count,
                 vsize = basic_item_size,
@@ -132,9 +126,6 @@ local tests = {
         },
         t = function(thr, wthr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
-            -- we want to slow this down compared to the initial load but
-            -- should still be reasonable.
-            -- the shuffle prevents "perfect" reloading from emptying pages
             mcs.add_custom(wthr, { func = "perf_warm" }, {
                 limit = reload90_item_count,
                 vsize = basic_item_size,
@@ -166,9 +157,6 @@ local tests = {
         },
         t = function(thr, wthr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
-            -- we want to slow this down compared to the initial load but
-            -- should still be reasonable.
-            -- the shuffle prevents "perfect" reloading from emptying pages
             mcs.add_custom(wthr, { func = "perf_warm" }, {
                 limit = basic_item_count,
                 vsize = basic_item_size,
@@ -200,9 +188,6 @@ local tests = {
         },
         t = function(thr, wthr, o)
             mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
-            -- we want to slow this down compared to the initial load but
-            -- should still be reasonable.
-            -- the shuffle prevents "perfect" reloading from emptying pages
             mcs.add_custom(wthr, { func = "perf_warm" }, {
                 limit = reload90_item_count,
                 vsize = basic_item_size,
@@ -214,7 +199,67 @@ local tests = {
             })
         end,
     },
-    -- TODO: another reloadold but it's all new data?
+    evictionold = {
+        s = base_arg .. " -o ext_path=/extstore/extstore:15g,ext_path=/extstore/extold:15g:old",
+        w = { {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100,
+        } },
+        a = {
+            cli = 25,
+            rate = 25000,
+            prefix = "extstore",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+        },
+        t = function(thr, wthr, o)
+            mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
+            mcs.add_custom(wthr, { func = "perf_warm" }, {
+                limit = reload90_item_count,
+                vsize = basic_item_size,
+                prefix = "extstore_old",
+                shuffle = true,
+                -- half the speed + smaller chunks.
+                flush_after = math.floor(warm_write_rate / 4),
+                sleep = 50,
+            })
+        end,
+    },
+    reloadcold = {
+        s = base_arg .. " -o ext_path=/extstore/extstore:25g,ext_path=/extstore/extcold:25g:coldcompact",
+        w = { {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100,
+        } },
+        a = {
+            cli = 25,
+            rate = 25000,
+            prefix = "extstore",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+        },
+        t = function(thr, wthr, o)
+            mcs.add(thr, { func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true }, o)
+            mcs.add_custom(wthr, { func = "perf_warm" }, {
+                limit = reload90_item_count,
+                vsize = basic_item_size,
+                prefix = "extstore_old",
+                shuffle = true,
+                -- half the speed + smaller chunks.
+                flush_after = math.floor(warm_write_rate / 4),
+                sleep = 50,
+            })
+        end,
+    },
+
 }
 
 local test_list = {
@@ -224,6 +269,8 @@ local test_list = {
     "reload90",
     "eviction",
     "reloadold",
+    "evictionold",
+    "reloadcold",
 }
 
 return {

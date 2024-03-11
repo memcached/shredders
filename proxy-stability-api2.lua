@@ -98,7 +98,7 @@ function wait_all_gen(rctx, arg)
     return function(r)
         rctx:enqueue(r, t)
         rctx:wait_cond(count, mcp.WAIT_ANY)
-        return rctx:any(t[1])
+        return rctx:res_any(t[1])
     end
 end
 
@@ -123,15 +123,14 @@ end
 
 function mcp_config_routes(conf)
     local map = {
-        ["gc"] = new_basic_factory({ }, gc_gen),
-        ["cluster"] = new_basic_factory({ list = { conf.cluster } }, direct_gen),
-        ["wcluster"] = new_basic_factory({ list = { conf.wcluster } }, direct_gen),
-        ["ccluster"] = new_basic_factory({ list = { conf.ccluster } }, direct_gen),
-        ["wccluster"] = new_basic_factory({ list = { conf.wccluster } }, direct_gen),
-        ["zone"] = new_basic_factory({ list = { conf.z1, conf.z2, conf.z3 } }, wait_all_gen),
-        ["wzone"] = new_basic_factory({ list = { conf.wz1, conf.wz2, conf.wz3 } }, wait_all_gen),
-        ["wzone"] = new_basic_factory({ list = { conf.wz1, conf.wz2, conf.wz3 } }, wait_all_gen),
-        ["internal"] = new_basic_factory({ }, internal_gen),
+        ["gc"] = new_basic_factory({ name = "gc" }, gc_gen),
+        ["cluster"] = new_basic_factory({ list = { conf.cluster }, name = "cluster" }, direct_gen),
+        ["wcluster"] = new_basic_factory({ list = { conf.wcluster }, name = "wcluster" }, direct_gen),
+        ["ccluster"] = new_basic_factory({ list = { conf.ccluster }, name = "ccluster" }, direct_gen),
+        ["wccluster"] = new_basic_factory({ list = { conf.wccluster }, name = "wccluster" }, direct_gen),
+        ["zone"] = new_basic_factory({ list = { conf.z1, conf.z2, conf.z3 }, name = "zone" }, wait_all_gen),
+        ["wzone"] = new_basic_factory({ list = { conf.wz1, conf.wz2, conf.wz3 }, name = "wzone" }, wait_all_gen),
+        ["internal"] = new_basic_factory({ name = "internal" }, internal_gen),
     }
 
     local default = new_basic_factory({ msg = "SERVER_ERROR no route\r\n" }, string_gen)

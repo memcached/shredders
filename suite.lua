@@ -327,12 +327,14 @@ function test_stability(o)
     local statm_conf = { func = "stat_sample", clients = 1, rate_limit = 1 }
     local statm_arg = { stats = { "proxy_conn_requests", "total_connections" },
         track = { "proxy_req_active", "proxy_await_active", "read_buf_count", "read_buf_bytes", "read_buf_bytes_free", "response_obj_count", "curr_connections" } }
+    local statpf_conf = { func = "proxyfuncs_stat_sample", clients = 1, rate_limit = 1 }
 
     local go_test = function(args)
         mcs.add(stats, timer_display)
         mcs.add(stats, timer_conf, args)
         mcs.add(stats, stat_conf, stat_arg)
         mcs.add(stats, statm_conf, statm_arg)
+        mcs.add(stats, statpf_conf)
         mcs.shredder(thr, time)
     end
 

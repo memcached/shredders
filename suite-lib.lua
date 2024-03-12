@@ -103,10 +103,31 @@ function _stat_sample(a)
     a.previous_stats = stats
 end
 
+function _stat_full(a)
+    local stats = {}
+    local res = mcs.res_new()
+    plog("NEWSTATS", "TRACK")
+    while true do
+        mcs.read(res)
+        if mcs.res_startswith(res, "END") then
+            break
+        end
+
+        plog("STAT", mcs.res_statname(res), mcs.res_stat(res))
+    end
+    plog("END")
+end
+
 function proxy_stat_sample(a)
     mcs.write("stats proxy\r\n")
     mcs.flush()
     _stat_sample(a)
+end
+
+function proxyfuncs_stat_sample(a)
+    mcs.write("stats proxyfuncs\r\n")
+    mcs.flush()
+    _stat_full(a)
 end
 
 function stat_sample(a)

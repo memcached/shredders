@@ -164,6 +164,16 @@ local tests_s = {
         go(a)
         nodectrl("unblock mc-node1")
     end},
+    {p = "fault", n = "bigblock", s = true, f = function(a, t, go)
+        mcs.add(t.t, { func = "runner_metaget", clients = clients * 400, rate_limit = 200000, init = true}, a)
+        mcs.add(t.t, { func = "runner_metaset", clients = clients, rate_limit = 5000}, a)
+        mcs.add(t.m, { func = "runner_block", clients = 1, rate_limit = 1, rate_period = 4000 },
+            { node = "mc-node1", _c = 0 })
+        mcs.add_custom(t.s, { func = "runner_watcher" }, { watchers = "proxyevents" })
+        go(a)
+        nodectrl("unblock mc-node1")
+    end},
+
     {p = "fault", n = "blocked", s = true, f = function(a, t, go)
         -- we leave the node blocked for the entire duration of the test.
         -- request rate should be stable.

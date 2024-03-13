@@ -251,7 +251,8 @@ function test_p_run_test(o, client)
         table.insert(allthr, t)
     end
 
-    local stats_arg = { stats = { "cmd_mg", "cmd_ms", "cmd_md", "cmd_get", "cmd_set" }, track = {} }
+    local pstats_arg = { stats = { "cmd_mg", "cmd_ms", "cmd_md", "cmd_get", "cmd_set" }, track = {} }
+    local stats_arg = { stats = { "proxy_conn_requests" }, track = { "rusage_user", "rusage_system", "proxy_req_active", "proxy_await_active" } }
 
     local test = test_p.tests[client]
     -- copy the argument table since we modify it at runtime.
@@ -265,7 +266,8 @@ function test_p_run_test(o, client)
         -- one func that reads the history and summarizes every second.
         mcs.add(testthr, { func = "perfrun_stats_out", rate_limit = 1, clients = 1 })
         mcs.add_custom(statthr, { func = "perfrun_stats_gather" }, { threads = o.threads })
-        mcs.add(statthr, { func = "proxy_stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
+        mcs.add(statthr, { func = "proxy_stat_sample", clients = 1, rate_limit = 1 }, pstats_arg)
+        mcs.add(statthr, { func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
         -- TODO: give the ctx a true/false return via a command.
         mcs.shredder(allthr, o.time)
 

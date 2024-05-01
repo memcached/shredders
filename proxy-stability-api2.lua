@@ -5,6 +5,7 @@ local perzone = 10
 function mcp_config_pools()
     local srv = mcp.backend
 
+    mcp.backend_use_iothread(true)
     mcp.backend_read_timeout(0.25)
     mcp.backend_connect_timeout(0.5)
     --mcp.active_req_limit(5000);

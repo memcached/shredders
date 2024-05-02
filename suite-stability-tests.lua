@@ -4,9 +4,9 @@ local clients = 20
 local client_high = clients * 20
 
 local suite_sets = {
-    { "main", { "cluster", "ccluster", "wcluster", "wccluster", "wzone", "zone", "internal" } },
-    { "bwlimit", { "cluster", "ccluster", "wcluster", "zone", "wzone" } },
-    { "fault", { "cluster", "ccluster", "wcluster", "zone" } },
+    { "main", { "cluster", "ccluster", "wcluster", "wccluster", "wzone", "zone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewait", "onewaitfg", "internal" } },
+    { "bwlimit", { "cluster", "ccluster", "wcluster", "zone", "wzone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewait", "onewaitfg" } },
+    { "fault", { "cluster", "ccluster", "wcluster", "zone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewaitfg" } },
 }
 
 local test_args = {

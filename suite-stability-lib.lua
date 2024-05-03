@@ -23,6 +23,7 @@ function stability_warm(a)
         mcs.client_write(c, req)
         written = written + size
         if written > FLUSH_AFTER then
+            plog("WARMER", written)
             mcs.client_flush(c)
             written = 0
         end

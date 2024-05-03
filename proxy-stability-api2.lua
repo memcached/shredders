@@ -148,8 +148,11 @@ end
 
 function gc_gen(rctx, arg)
     return function(r)
-        print("garbage: " .. collectgarbage("count"))
-        return "END\r\n"
+        local k = r:key()
+        if k == "/gc/collect" then
+            collectgarbage("collect")
+        end
+        return "SERVER_ERROR garbage: " .. tostring(collectgarbage("count")) .. "\r\n"
     end
 end
 

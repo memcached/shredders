@@ -170,7 +170,8 @@ function mcp_config_routes(conf)
     local f_subcluster = new_basic_factory({ list = { f_cluster }, name = "subcluster" }, direct_gen)
     local f_subwcluster = new_basic_factory({ list = { f_wcluster }, name = "subwcluster" }, direct_gen)
     -- split into both worker and io thread
-    -- FIXME: this causes a leak of slots_cluster
+    -- FIXME: this causes the IO thread to get behind, which causes infinite
+    -- memory usage.
     --local f_onewaitwc = new_basic_factory({ list = { f_wcluster, f_cluster }, name = "onewaitwc" }, onewait_gen)
     local f_onewaitwc = new_basic_factory({ list = { f_wcluster, f_wcluster }, name = "onewaitwc" }, onewait_gen)
     local f_onewait = new_basic_factory({ list = { f_cluster, f_cluster }, name = "onewait" }, onewait_gen)

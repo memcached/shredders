@@ -193,7 +193,7 @@ function runner_basicpipe(a)
         else
             local status, elapsed = mcs.match(req, res)
             if not status then
-                local key = prefix .. num
+                local key = prefix .. nums[i]
                 print("mismatched response: " .. key .. " GOT: " .. mcs.resline(res))
             end
             -- pull the END

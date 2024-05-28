@@ -8,6 +8,7 @@ function mcp_config_pools()
     mcp.backend_use_iothread(true)
     mcp.backend_read_timeout(0.25)
     mcp.backend_connect_timeout(0.5)
+    mcp.backend_depth_limit(50000)
     --mcp.active_req_limit(5000);
     --mcp.buffer_memory_limit(100000);
     

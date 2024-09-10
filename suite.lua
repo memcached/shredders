@@ -325,7 +325,7 @@ function test_stability(o)
     local timer_display = { func = "timer_display", clients = 1, rate_limit = 1, init = true }
     local stat_conf = { func = "proxy_stat_sample", clients = 1, rate_limit = 1 }
     local stat_arg = { stats = { "cmd_mg", "cmd_ms", "cmd_md", "cmd_get", "cmd_set" },
-        track = { "active_req_limit", "buffer_memory_limit", "buffer_memory_used" } }
+        track = { "active_req_limit", "buffer_memory_limit", "buffer_memory_used", "vm_memory_kb", "vm_gc_runs" } }
     local statm_conf = { func = "stat_sample", clients = 1, rate_limit = 1 }
     local statm_arg = { stats = { "proxy_conn_requests", "total_connections" },
         track = { "proxy_req_active", "proxy_await_active", "read_buf_count", "read_buf_bytes", "read_buf_bytes_free", "response_obj_count", "curr_connections" } }

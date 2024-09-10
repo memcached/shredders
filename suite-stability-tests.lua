@@ -74,6 +74,10 @@ local tests_s = {
         mcs.add(t.t, { func = "runner_metaset", clients = clients, rate_limit = 0}, a)
         mcs.add(t.t, { func = "runner_metadelete", clients = clients, rate_limit = 0, init = true}, a)
     end},
+    {p = "main", n = "highmgpipe", f = function(a, t)
+        mcs.add(t.t, { func = "runner_metagetpipe", clients = clients, rate_limit = 0, init = true},
+            { prefix = a.prefix, total_keys = a.total_keys, pipelines = 250 })
+    end},
     {p = "main", n = "basicgetset", f = function(a, t)
         -- use a different prefix so we can test natural loading.
         mcs.add(t.t, { func = "runner_basic", clients = clients, rate_limit = 0},

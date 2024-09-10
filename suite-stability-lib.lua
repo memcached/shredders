@@ -40,6 +40,41 @@ end
 -- RUNNERS --
 --
 
+function runner_metagetpipe(a)
+    local prefix = a.prefix
+    local total_keys = a.total_keys
+    local res = mcs.res_new()
+    local reqs = {}
+    local nums = {}
+    local pipelines = a.pipelines
+    for i=1,pipelines do
+        -- each factory can have one outstanding req at a time, to allow for
+        -- response matching.
+        local req = mcs.mg_factory(a.prefix, "v k")
+        table.insert(reqs, req)
+        table.insert(nums, 1) -- pre-seed
+    end
+
+    return function()
+        for i=1, pipelines do
+            local num = math.random(total_keys)
+            mcs.write_factory(reqs[i], num)
+            nums[i] = num -- overwrite; don't make a new table each loop.
+        end
+        mcs.flush()
+
+        for i=1, pipelines do
+            mcs.read(res)
+            local status, elapsed = mcs.match(reqs[i], res)
+            if not status then
+                local num = nums[i]
+                local key = prefix .. num
+                print("mismatched response: " .. key .. " GOT: " .. mcs.resline(res))
+            end
+        end
+    end
+end
+
 -- TODO: pipelined versions of get and set?
 -- flags as arg?
 function runner_metaget(a)
@@ -61,6 +96,7 @@ function runner_metaget(a)
         end
     end
 end
+
 
 function runner_metaset(a)
     local num = math.random(a["total_keys"])

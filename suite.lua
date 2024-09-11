@@ -92,8 +92,6 @@ function config(a)
     o["statsthr"] = mcs.thread()
     o["maintthr"] = mcs.thread()
 
-    local suites = { suite_stability }
-
     if a["suite"] ~= nil then
         print("[init] overriding test suite: " .. a["suite"])
         _G["test_" .. a["suite"]](o)
@@ -126,12 +124,13 @@ function test_ext_stop()
 end
 
 function test_ext_warm(thread, client)
-    plog("LOG", "INFO", "warming")
     local c = client
     if c == nil or #c == 0 then
         -- allow empty lists to skip any warming.
+        plog("LOG", "INFO", "warming skipped")
         return
     end
+    plog("LOG", "INFO", "warming")
     for _, conf in ipairs(c) do
         mcs.add_custom(thread, { func = "perf_warm" }, conf)
     end

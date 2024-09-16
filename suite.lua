@@ -92,19 +92,199 @@ function config(a)
     o["statsthr"] = mcs.thread()
     o["maintthr"] = mcs.thread()
 
-    if a["suite"] ~= nil then
-        print("[init] overriding test suite: " .. a["suite"])
-        _G["test_" .. a["suite"]](o)
-    else
-        test_stability(o)
-        test_performance(o)
-        test_extstore(o)
+    if a.suite == nil then
+        error("must specify a suite to run")
     end
+    test_run_suite(a.suite, o)
 end
 
 --
--- TEST PLANS --
+-- GENERIC TEST RUNNER
 --
+
+local function ts_advance_test(tstack)
+    local last = tstack[#tstack]
+    local v = last.v
+    local entry = nil
+    if v ~= nil then
+        if type(v) == "table" then
+            -- If v is a plain table, shift from the front of it
+            entry = table.remove(v, 1)
+        elseif type(v) == "function" then
+            -- If v is a function, call it and check the result for nil
+            entry = v()
+        end
+    else if last.t then
+        -- there's no variant but we have a test to execute
+        -- FIXME: maybe this is wrong. the .t could be at a higher level than
+        -- the .v
+        entry = last
+    end
+
+    if entry ~= nil then
+        table.insert(tstack, entry)
+        if entry.v then
+            return tstack:advance()
+        end
+        return true
+    else
+        -- is there a parent?
+        if #tstack then
+            table.remove(tstack)
+            return tstack:advance()
+        else
+            return false
+        end
+    end
+end
+
+local function ts_find(tstack, key)
+    for i=#tstack, 0, -1 do
+        if rawget(tstack[i], key) then
+            return tstack[i].key
+        end
+    end
+end
+
+-- TODO: mcshredder methods for testing when ports become alive/etc.
+local function test_daemon_startup(start, stop)
+    if stop ~= nil then
+        plog("LOG", "INFO", "stopping previous test daemon")
+        if type(stop) == "string" then
+            nodectrl(stop)
+            os.execute("sleep 8")
+        else
+            stop()
+        end
+    end
+
+    plog("LOG", "INFO", "starting next test daemon")
+    if type(start) == "string" then
+        nodectrl(start)
+        os.execute("sleep 2")
+    else
+        start()
+    end
+end
+
+-- TODO: allow dynamic path prefix via name?
+local function test_warm(thread, c)
+    if c == nil or #c == 0 then
+        plog("LOG", "INFO", "warming skipped")
+        return
+    end
+    plog("LOG", "INFO", "warming")
+    for _, conf in ipairs(c) do
+        mcs.add_custom(thread, { func = conf[1] }, conf[2])
+    end
+    mcs.shredder({thread})
+    plog("LOG", "INFO", "warming end")
+end
+
+local function test_wrapper_new(o)
+    local w = {}
+    local d = {
+        stats = {},
+        maint = {},
+        warm  = {},
+        work  = {}
+    }
+
+    local setup = function(tset, thr, confs)
+        if #confs then
+            for _, a in ipairs(confs) do
+                mcs.add(thr, a[1], a[2])
+            end
+            table.insert(tset, thr)
+        end
+    end
+
+    setmetatable(w, {
+        stats = function(conf, args)
+            table.insert(d.stats, {conf, args})
+        end,
+        maint = function(conf, args)
+            table.insert(d.maint, {conf, args})
+        end,
+        warm = function(conf, args)
+            table.insert(d.warm, {conf, args})
+        end,
+        work = function(conf, args)
+            table.insert(d.work, {conf, args})
+        end,
+        shred = function(time)
+            if time == nil then
+                time = o.time
+            end
+            local thr = {}
+            -- gather any activated threads together.
+            -- needed to actually execute a shred.
+            setup(thr, o.statsthr, d.stats)
+            setup(thr, o.maintthr, d.maint)
+            setup(thr, o.warmthr, d.warm)
+            setup(thr, o.testthr, d.work)
+            mcs.shredder(thr, time)
+            -- always wipe config stack for main test threads.
+            d.work = {}
+        end
+        pending = function()
+            if #d.work then
+                return true
+            end
+            return false
+        end
+    })
+end
+
+local function test_run_suite(suite, o)
+    -- TODO: some smarts for where to look
+    -- expect users to have symlinks for external tests
+    local top = dofile("./" .. suite .. "/tests.lua")
+
+    local tstack = {top.test}
+    -- TODO: recursively assembled name
+    setmetatable(tstack, {advance = ts_advance_test,
+        __index = ts_find})
+
+    local start = nil
+    local stop = nil
+    local warm = nil
+    -- loop while tests exist to run.
+    while tstack:advance() do
+        local next_start = tstack.s
+        if next_start ~= start then
+            local next_stop = tstack.e
+            if next_stop == nil then
+                error("test must specify .e for ending a test")
+            end
+            test_daemon_startup(next_start, stop)
+            start = next_start
+            stop = next_stop
+        end
+
+        local warmers = tstack.w
+        if warm ~= warmers then
+            test_warm(o.warmthr, warmers)
+        else
+            plog("LOG", "INFO", "pre-warmed")
+        end
+
+        local runner = test_wrapper_new(o)
+        tstack.t(runner)
+        if runner:pending() then
+            runner:shred()
+        end
+    end
+
+    if not o.keep and stop then
+        if type(stop) == "string" then
+            nodectrl(stop)
+            os.execute("sleep 8")
+        else
+            stop()
+        end
+    end
+end
 
 --
 -- extstore test runner

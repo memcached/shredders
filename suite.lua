@@ -103,45 +103,86 @@ end
 --
 
 local function ts_advance_test(tstack)
-    local last = tstack[#tstack]
-    local v = last.v
-    local entry = nil
-    if v ~= nil then
-        if type(v) == "table" then
-            -- If v is a plain table, shift from the front of it
-            entry = table.remove(v, 1)
-        elseif type(v) == "function" then
-            -- If v is a function, call it and check the result for nil
-            entry = v()
-        end
-    else if last.t then
-        -- there's no variant but we have a test to execute
-        -- FIXME: maybe this is wrong. the .t could be at a higher level than
-        -- the .v
-        entry = last
+    local top = tstack[#tstack]
+    if not top then
+        -- stack empty: processed everything.
+        return false
     end
 
-    if entry ~= nil then
-        table.insert(tstack, entry)
-        if entry.v then
-            return tstack:advance()
+    -- iterate the variant if we're not currently looping the test.
+    plog("DEBUG", "ts:advance() -> before top.v")
+    if not top.__ti and top.v then
+        if top.__vi then
+            top.__vi = top.__vi + 1
+        else
+            top.__vi = 1
         end
-        return true
-    else
-        -- is there a parent?
-        if #tstack then
+
+        local nv = top.v[top.__vi]
+        if nv then
+            -- accessory name for the variant
+            if top.vn then
+                -- FIXME: add a prefix?
+                top[top.vn] = nv
+            end
+        else
+            -- no more variants, pop and recurse.
+            top.__vi = nil
             table.remove(tstack)
             return tstack:advance()
-        else
-            return false
         end
     end
+    plog("DEBUG", "ts:advance() -> after top.v")
+
+    plog("DEBUG", "ts:advance() -> before top.t")
+    if top.t then
+        if top.__ti then
+            top.__ti = top.__ti + 1
+        else
+            top.__ti = 1
+        end
+        plog("DEBUG", "top ti", top.__ti)
+
+        local nt = top.t[top.__ti]
+        if nt then
+            -- we have another test to run, recurse into it.
+            table.insert(tstack, nt)
+            return tstack:advance()
+        else
+            -- out of things to iterate.
+            top.__ti = nil -- reset the test iterator
+            if top.v then
+                -- we might be running a variant: leave the tstack alone and
+                -- call self to check the variant.
+                return tstack:advance()
+            else
+                -- nothing to iterate. pop and advance.
+                table.remove(tstack)
+                return tstack:advance()
+            end
+        end
+    end
+    plog("DEBUG", "ts:advance() -> past top.t")
+
+    -- test has a function to execute, return true.
+    if top.f then
+        return true
+    else
+        -- we've possibly walked back upwards to a point where there's no test
+        -- function, so we still stop processin ghere.
+        return false
+    end
+end
+
+local function ts_pop(tstack)
+    table.remove(tstack)
 end
 
 local function ts_find(tstack, key)
     for i=#tstack, 0, -1 do
-        if rawget(tstack[i], key) then
-            return tstack[i].key
+        local v = rawget(tstack[i], key)
+        if v then
+            return v
         end
     end
 end
@@ -167,6 +208,19 @@ local function test_daemon_startup(start, stop)
     end
 end
 
+local function ts_name(tstack)
+    local n = {}
+    for _, t in ipairs(tstack) do
+        if t.n then
+            table.insert(n, t.n)
+        end
+        if t.vn then
+            table.insert(n, t[t.vn])
+        end
+    end
+    return table.concat(n, "_")
+end
+
 -- TODO: allow dynamic path prefix via name?
 local function test_warm(thread, c)
     if c == nil or #c == 0 then
@@ -181,8 +235,7 @@ local function test_warm(thread, c)
     plog("LOG", "INFO", "warming end")
 end
 
-local function test_wrapper_new(o)
-    local w = {}
+local function test_wrapper_new(o, tstack)
     local d = {
         stats = {},
         maint = {},
@@ -190,70 +243,86 @@ local function test_wrapper_new(o)
         work  = {}
     }
 
-    local setup = function(tset, thr, confs)
+    local setup = function(all, thr, confs)
         if #confs then
             for _, a in ipairs(confs) do
                 mcs.add(thr, a[1], a[2])
             end
-            table.insert(tset, thr)
+            if type(thr) == "userdata" then
+                table.insert(all, thr)
+            else
+                for _, v in pairs(thr) do
+                    table.insert(all, v)
+                end
+            end
         end
     end
 
-    setmetatable(w, {
-        stats = function(conf, args)
+    local w = {
+        stats = function(self, conf, args)
             table.insert(d.stats, {conf, args})
         end,
-        maint = function(conf, args)
+        maint = function(self, conf, args)
             table.insert(d.maint, {conf, args})
         end,
-        warm = function(conf, args)
+        warm = function(self, conf, args)
             table.insert(d.warm, {conf, args})
         end,
-        work = function(conf, args)
+        work = function(self, conf, args)
             table.insert(d.work, {conf, args})
         end,
-        shred = function(time)
+        shred = function(self, time)
             if time == nil then
                 time = o.time
             end
-            local thr = {}
+            local all = {}
             -- gather any activated threads together.
             -- needed to actually execute a shred.
-            setup(thr, o.statsthr, d.stats)
-            setup(thr, o.maintthr, d.maint)
-            setup(thr, o.warmthr, d.warm)
-            setup(thr, o.testthr, d.work)
-            mcs.shredder(thr, time)
+            setup(all, o.statsthr, d.stats)
+            setup(all, o.maintthr, d.maint)
+            setup(all, o.warmthr, d.warm)
+            setup(all, o.testthr, d.work)
+            mcs.shredder(all, time)
             -- always wipe config stack for main test threads.
             d.work = {}
-        end
-        pending = function()
-            if #d.work then
+        end,
+        pending = function(self)
+            if #d.work > 0 then
                 return true
             end
             return false
-        end
-    })
+        end,
+        key = function(self, k)
+            return tstack:find(k)
+        end,
+    }
+
+    w.__index = w
+    return setmetatable({}, w)
 end
 
-local function test_run_suite(suite, o)
+function test_run_suite(suite, o)
     -- TODO: some smarts for where to look
     -- expect users to have symlinks for external tests
     local top = dofile("./" .. suite .. "/tests.lua")
 
-    local tstack = {top.test}
-    -- TODO: recursively assembled name
-    setmetatable(tstack, {advance = ts_advance_test,
-        __index = ts_find})
+    local tstack = {top}
+    local mt = {advance = ts_advance_test,
+        find = ts_find,
+        name = ts_name,
+        pop = ts_pop,
+    }
+    mt.__index = mt
+    setmetatable(tstack, mt)
 
     local start = nil
     local stop = nil
     local warm = nil
     -- loop while tests exist to run.
     while tstack:advance() do
-        local next_start = tstack.s
+        local next_start = tstack:find("s")
         if next_start ~= start then
-            local next_stop = tstack.e
+            local next_stop = tstack:find("e")
             if next_stop == nil then
                 error("test must specify .e for ending a test")
             end
@@ -262,18 +331,24 @@ local function test_run_suite(suite, o)
             stop = next_stop
         end
 
-        local warmers = tstack.w
-        if warm ~= warmers then
+        local runner = test_wrapper_new(o, tstack)
+        local warmers = tstack:find("w")
+        if type(warmers) == "function" then
+            test_warm(o.warmthr, warmers(runner))
+        elseif warm ~= warmers then
             test_warm(o.warmthr, warmers)
         else
             plog("LOG", "INFO", "pre-warmed")
         end
 
-        local runner = test_wrapper_new(o)
-        tstack.t(runner)
+        local f = tstack:find("f")
+        plog("START", tstack:name())
+        f(runner)
         if runner:pending() then
+            plog("DEBUG", "running shred from pending work")
             runner:shred()
         end
+        tstack:pop()
     end
 
     if not o.keep and stop then

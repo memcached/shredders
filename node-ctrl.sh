@@ -10,6 +10,8 @@ if [ $1 == "startdbg" ] ; then
     lxc exec $host -- sh -c "LUA_PATH=\"$CONFDIR/?.lua;;\" $MCBINDIR/memcached-debug -c 30000 -u ubuntu -d -P /tmp/memcached.pid $ARG"
 elif [ $1 == "start" ] ; then
     lxc exec $host -- sh -c "LUA_PATH=\"$CONFDIR/?.lua;;\" $MCBINDIR/memcached -c 30000 -u ubuntu -d -P /tmp/memcached.pid $ARG"
+elif [ $1 == "startraw" ] ; then
+    lxc exec $host -- sh -c "$CONFDIR/$ARG"
 elif [ $1 == "stop" ] ; then
     lxc exec $host -- sh -c "kill \`cat /tmp/memcached.pid\`"
 elif [ $1 == "bwlimit" ] ; then

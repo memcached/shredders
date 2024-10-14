@@ -179,7 +179,9 @@ local function ts_pop(tstack)
 end
 
 local function ts_find(tstack, key)
-    for i=#tstack, 0, -1 do
+    --plog("DEBUG", "ts_find", type(tstack), key)
+    for i=#tstack, 1, -1 do
+        --plog("DEBUG", "ts_find loop", type(tstack), i, key)
         local v = rawget(tstack[i], key)
         if v then
             return v
@@ -246,7 +248,12 @@ local function test_wrapper_new(o, tstack)
     local setup = function(all, thr, confs)
         if #confs then
             for _, a in ipairs(confs) do
-                mcs.add(thr, a[1], a[2])
+                if a[1].custom then
+                    -- FIXME: cope if thread is singular or not
+                    mcs.add_custom(thr, a[1], a[2])
+                else
+                    mcs.add(thr, a[1], a[2])
+                end
             end
             if type(thr) == "userdata" then
                 table.insert(all, thr)

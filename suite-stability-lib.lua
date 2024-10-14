@@ -97,6 +97,32 @@ function runner_metaget(a)
     end
 end
 
+function runner_metaset_reconn(a)
+    local prefix = a.prefix
+    local total_keys = a.total_keys
+    local res = mcs.res_new()
+    local reconn_chance = a.reconn_chance
+    local size = a.vsize
+    local rand = math.random
+
+    return function()
+        local num = rand(total_keys)
+        local req = mcs.ms(prefix, num, size)
+        mcs.write(req)
+        mcs.flush()
+
+        if rand(reconn_chance) == 1 then
+            mcs.disconnect()
+        else
+            mcs.read(res)
+            local status, elapsed = mcs.match(req, res)
+            if not status then
+                local key = prefix .. num
+                print("mismatched response: " .. key .. " GOT: " .. mcs.resline(res))
+            end
+        end
+    end
+end
 
 function runner_metaset(a)
     local num = math.random(a["total_keys"])

@@ -1,16 +1,21 @@
 
 -- backends per zone.
 local perzone = 10
+local S_NEAR_TIMEOUT <const> = 1
+local S_ALL_TIMEOUT <const> = 2
 
 function mcp_config_pools()
     local srv = mcp.backend
 
+    mcp.add_stat(S_NEAR_TIMEOUT, "read_timeout")
+    mcp.add_stat(S_ALL_TIMEOUT, "write_timeout")
+
     mcp.backend_use_iothread(true)
-    mcp.backend_read_timeout(0.25)
+    mcp.backend_read_timeout(0.3)
     mcp.backend_connect_timeout(0.5)
     mcp.backend_depth_limit(50000)
     --mcp.active_req_limit(5000);
-    --mcp.buffer_memory_limit(100000);
+    mcp.buffer_memory_limit(3000000);
     
     -- TODO: local node1ip = getip("mc-node1")
     local node1ip = '10.191.24.56'
@@ -62,6 +67,9 @@ function mcp_config_pools()
         wz1 = mcp.pool({b1}, { beprefix = "wio", iothread = false }),
         wz2 = mcp.pool({b2}, { beprefix = "wio", iothread = false }),
         wz3 = mcp.pool({b3}, { beprefix = "wio", iothread = false }),
+        wz1r = mcp.pool({b1c}, { beprefix = "wior", iothread = false }),
+        wz2r = mcp.pool({b2c}, { beprefix = "wior", iothread = false }),
+        wz3r = mcp.pool({b3c}, { beprefix = "wior", iothread = false }),
     }
 
     return conf
@@ -84,6 +92,75 @@ function new_basic_factory(arg, func)
 
     fgen:ready({ f = func, a = o, n = arg.name})
     return fgen
+end
+
+function near_timeout_gen(rctx, arg)
+    -- we first attempt to fetch from a "local" zone.
+    local near = arg.t[1]
+    local far = { table.unpack(arg.t, 2) }
+    local all = arg.t
+    local wait = 0.05
+    local s = mcp.stat
+
+    return function(r)
+        local res, timeout = rctx:enqueue_and_wait(r, near, wait)
+
+        if timeout then
+            s(S_NEAR_TIMEOUT, 1)
+        end
+
+        if res and res:ok() then
+            return res
+        end
+
+        rctx:enqueue(r, far)
+
+        rctx:wait_cond(#far, mcp.WAIT_OK, wait)
+
+        for _, h in ipairs(all) do
+            local res, mode = rctx:result(h)
+            if res and res:ok() then
+                return res
+            end
+        end
+
+        -- couldn't find anything better than what we already had.
+        return res
+    end
+end
+
+function all_timeout_gen(rctx, arg)
+    local near = arg.t[1]
+    local far = { table.unpack(arg.t, 2) }
+    local all = arg.t
+    local wait = 0.05
+    local s = mcp.stat
+
+    return function(r)
+        rctx:enqueue(r, all)
+
+        local res, timeout = rctx:wait_handle(near, wait)
+        --local res, timeout = rctx:wait_handle(near)
+        if timeout then
+            s(S_ALL_TIMEOUT, 1)
+        end
+
+        if res and res:ok() then
+            return res
+        end
+
+        done, timeout = rctx:wait_cond(1, mcp.WAIT_GOOD, wait)
+        --done, timeout = rctx:wait_cond(1, mcp.WAIT_GOOD)
+        done = rctx:wait_cond(1, mcp.WAIT_GOOD)
+        for _, h in ipairs(all) do
+            local res, mode = rctx:result(h)
+            if res and res:ok() then
+                return res
+            end
+        end
+
+        return res
+    end
 end
 
 function direct_gen(rctx, arg)
@@ -167,6 +244,9 @@ function mcp_config_routes(conf)
     local f_zonegood = new_basic_factory({ list = { conf.z1, conf.z2, conf.z3 }, name = "zonegood" }, fastgood_gen)
     local f_wzonegood = new_basic_factory({ list = { conf.wz1, conf.wz2, conf.wz3 }, name = "wzonegood" }, fastgood_gen)
 
+    local f_neartimeout = new_basic_factory({ list = { conf.wz1r, conf.wz2r, conf.wz3r }, name = "neartimeout" }, near_timeout_gen)
+    local f_alltimeout = new_basic_factory({ list = { conf.wz1, conf.wz2, conf.wz3 }, name = "alltimeout" }, all_timeout_gen)
+
     -- subrctx focused tests
     local f_subcluster = new_basic_factory({ list = { f_cluster }, name = "subcluster" }, direct_gen)
     local f_subwcluster = new_basic_factory({ list = { f_wcluster }, name = "subwcluster" }, direct_gen)
@@ -189,6 +269,10 @@ function mcp_config_routes(conf)
         ["wzone"] = f_wzone,
         ["zonegood"] = f_zonegood,
         ["wzonegood"] = f_wzonegood,
+        neartimeout = {
+            [mcp.CMD_MG] = f_neartimeout,
+            [mcp.CMD_MS] = f_alltimeout, -- wait_all for writes
+        },
         ["subcluster"] = f_subcluster,
         ["subwcluster"] = f_subwcluster,
         ["onewaitwc"] = f_onewaitwc,

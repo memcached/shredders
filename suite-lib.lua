@@ -64,6 +64,64 @@ function perf_warm(a)
     mcs.client_read(c, res)
 end
 
+function perf_warm_cas(a)
+    local count = a.limit
+    local size = a.vsize
+    local prefix = a.prefix
+    local written = 0
+    local shuffle = a.shuffle
+    local sleep = a.sleep
+
+    local c = mcs.client_new({})
+    if c == nil then
+        plog("LOG", "ERROR", "warmer failed to connect to host")
+        return
+    end
+    if mcs.client_connect(c) == false then
+        plog("LOG", "ERROR", "warmer failed to connect")
+        return
+    end
+
+    local numbers = {}
+    if shuffle then
+        for i=1,count do
+            table.insert(numbers, i)
+        end
+        -- shuffle
+        for i=#numbers, 2, -1 do
+            local j = math.random(i)
+            numbers[i], numbers[j] = numbers[j], numbers[i]
+        end
+    end
+
+    local get_res = mcs.res_new()
+    for i=1,count do
+        local num = i
+        if shuffle then
+            num = numbers[i]
+        end
+        local get_req = mcs.mg(prefix, num, "c N30")
+        mcs.client_write(c, get_req)
+        mcs.client_flush(c)
+        mcs.client_read(c, get_res)
+        local _, cas = mcs.res_flagtoken(get_res, "c")
+
+        local set_req = mcs.ms(prefix, num, size, "q C" .. cas)
+        mcs.client_write(c, set_req)
+        --mcs.client_flush(c)
+
+        if math.floor(i % (count / 10)) == 0 then
+            plog("LOG", "INFO", "cas warming pct", tostring(math.floor(i / count * 100)))
+        end
+    end
+
+    mcs.client_write(c, "mn\r\n")
+    mcs.client_flush(c)
+    local res = mcs.res_new()
+    -- TODO: bother validating MN? this doesn't fail here.
+    mcs.client_read(c, res)
+end
+
 --
 -- STATS DISPLAY
 --

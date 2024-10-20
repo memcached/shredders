@@ -182,6 +182,7 @@ function perfrun_metaget_pipe(a)
     local pipes = a.pipes
     local reqfacs = {}
     local results = {}
+    local pfx = "perf"
     if a.prefix then
         pfx = a.prefix
     end
@@ -219,8 +220,12 @@ function perfrun_metaset(a)
     if a.prefix then
         pfx = a.prefix
     end
+    local flags = ""
+    if a.flags then
+        flags = a.flags
+    end
     local res = mcs.res_new()
-    local req = mcs.ms_factory(pfx, "")
+    local req = mcs.ms_factory(pfx, flags)
     perfrun_init()
 
     return function()
@@ -230,6 +235,43 @@ function perfrun_metaset(a)
 
         mcs.read(res)
         local status, elapsed = mcs.match(req, res)
+        if not status then
+            print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+        end
+
+        perfrun_bucket("ms", elapsed)
+    end
+end
+
+function perfrun_metacasset(a)
+    local total_keys = a.limit
+    local size = a.vsize
+    local pfx = "perf"
+    if a.prefix then
+        pfx = a.prefix
+    end
+    local res = mcs.res_new()
+    --local req = mcs.ms_factory(pfx, "")
+    local get_req = mcs.mg_factory(pfx, "c N30")
+    local get_res = mcs.res_new()
+    perfrun_init()
+
+    return function()
+        local num = math.random(total_keys)
+        mcs.write_factory(get_req, num)
+        mcs.flush()
+        mcs.read(get_res)
+        local has_cas, cas = mcs.res_flagtoken(get_res, "c")
+        -- TODO: pass c -> C to the factory?
+        -- Factory too simple to do it, have to do the same code as warmer.
+
+        local set_req = mcs.ms(pfx, num, size, "C" .. cas)
+        --mcs.write_factory(req, num, size)
+        mcs.write(set_req)
+        mcs.flush()
+
+        mcs.read(res)
+        local status, elapsed = mcs.match(set_req, res)
         if not status then
             print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
         end

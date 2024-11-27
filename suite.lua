@@ -292,12 +292,18 @@ local function test_wrapper_new(o, tstack)
             mcs.shredder(all, time)
             -- always wipe config stack for main test threads.
             d.work = {}
+            d.warm = {}
+            d.maint = {}
+            d.stats = {}
         end,
         pending = function(self)
             if #d.work > 0 then
                 return true
             end
             return false
+        end,
+        thread_count = function(self)
+            return o.threads
         end,
         key = function(self, k)
             return tstack:find(k)

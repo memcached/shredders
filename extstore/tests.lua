@@ -51,17 +51,19 @@ local function start(a, b)
         b = base_arg
     end
     return function()
-        nodectrl("start mc-extstore " .. base_arg .. a)
-        os.execute("sleep 2")
+        nodestart("mc-extstore", base_arg .. a, 2)
     end
 end
 
 local function stop()
     return function()
-        nodectrl("stop mc-extstore")
-        os.execute("sleep 8")
+        nodestop("mc-extstore", 8)
     end
 end
+
+-- ensure mc-extstore is stopped
+-- TODO: nodectrl to check-if-pid-running-then-etc
+nodestop("mc-extstore", 2)
 
 -- TODO: small item test.
 

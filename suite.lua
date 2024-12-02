@@ -39,6 +39,15 @@ function _split_arghash(a)
     return t
 end
 
+local _TESTENV = {
+
+}
+-- query the test environment?
+function TESTENV(a)
+    -- simple wrapper so I can add some logic as needed.
+    return _TESTENV[a]
+end
+
 function config(a)
     local o = {
         threads = 5,
@@ -53,6 +62,13 @@ function config(a)
         print("[init] overriding: test time")
         o.time = tonumber(a.time)
     end
+    if a["external"] ~= nil then
+        _TESTENV["external"] = true
+    end
+    if a["debugbin"] ~= nil then
+        _TESTENV["debugbin"] = true
+    end
+
     if a["set"] ~= nil then
         print("[init] overriding: test set")
         o.set = _split_arghash(a["set"])

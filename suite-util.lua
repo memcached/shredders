@@ -12,6 +12,32 @@ function nodectrl(a)
     end
 end
 
+function nodestop(host, arg, sleep)
+    if TESTENV("external") then
+        plog("LOG", "INFO", string.format("skipping node control: stop %s %s", host, arg))
+        return
+    end
+    nodectrl(string.format("stop %s %s", host, arg))
+    if sleep then
+        os.execute("sleep " .. tostring(sleep))
+    end
+end
+
+function nodestart(host, arg, sleep)
+    if TESTENV("external") then
+        plog("LOG", "INFO", string.format("skipping node control: start %s %s", host, arg))
+        return
+    end
+    if TESTENV("debugbin") then
+        nodectrl(string.format("startdbg %s %s", host, arg))
+    else
+        nodectrl(string.format("start %s %s", host, arg))
+    end
+    if sleep then
+        os.execute("sleep " .. tostring(sleep))
+    end
+end
+
 function nodeips()
     return NODE_IPS
 end

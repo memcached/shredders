@@ -46,38 +46,49 @@ local function go(r)
     r:shred()
 end
 
+local function start(a, b)
+    if b == nil then
+        b = base_arg
+    end
+    return function()
+        nodectrl("start mc-extstore " .. base_arg .. a)
+        os.execute("sleep 2")
+    end
+end
+
+local function stop()
+    return function()
+        nodectrl("stop mc-extstore")
+        os.execute("sleep 8")
+    end
+end
+
 -- TODO: small item test.
 
-local t = {
-    e = function()
-        --nodectrl("stop mc-extstore")
-        os.execute("sleep 8")
+local test_basic = {
+    n = "basic",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    w = function(r)
+        return { { "perf_warm", {
+            limit = basic_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } } }
     end,
-    t = {
-        {
-            n = "basic",
-            s = function()
-                --nodectrl("start mc-extstore " .. base_arg .. " -o ext_path=/extstore/extstore:25g") 
-                os.execute("sleep 2")
-            end,
-            w = function(r)
-                return { { "perf_warm", {
-                    limit = basic_item_count,
-                    vsize = basic_item_size,
-                    prefix = "extstore",
-                    shuffle = true,
-                    flush_after = warm_write_rate,
-                    sleep = 100
-                } } }
-            end,
-            f = function(r)
-                local a = { cli = 40, rate = 40000, prefix = "extstore", limit = basic_item_count, vsize = basic_item_size }
-                r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.9, init = true }, a)
-                r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.1, init = true }, a)
-                go(r)
-            end
-        }
-    }
+    f = function(r)
+        local a = { cli = 40, rate = 40000, prefix = "extstore", limit = basic_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.9, init = true }, a)
+        r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.1, init = true }, a)
+        go(r)
+    end
 }
 
-return t
+return {
+    e = stop(),
+    t = {
+        test_basic,
+    }
+}

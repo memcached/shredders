@@ -257,7 +257,7 @@ local function test_warm(thread, c)
     end
     plog("LOG", "INFO", "warming")
     for _, conf in ipairs(c) do
-        mcs.add_custom(thread, { func = conf[1] }, conf[2])
+        mcs.add_custom(thread, { func = conf.func }, conf)
     end
     mcs.shredder({thread})
     plog("LOG", "INFO", "warming end")

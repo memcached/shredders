@@ -71,14 +71,15 @@ local test_basic = {
     n = "basic",
     s = start(" -o ext_path=/extstore/extstore:25g"),
     w = function(r)
-        return { { "perf_warm", {
+        return { {
+            func = "perf_warm",
             limit = basic_item_count,
             vsize = basic_item_size,
             prefix = "extstore",
             shuffle = true,
             flush_after = warm_write_rate,
             sleep = 100
-        } } }
+        } }
     end,
     f = function(r)
         local a = { cli = 40, rate = 40000, prefix = "extstore", limit = basic_item_count, vsize = basic_item_size }
@@ -92,14 +93,15 @@ local test_reload50 = {
     n = "reload50",
     s = start(" -o ext_path=/extstore/extstore:25g"),
     w = function(r)
-        return { { "perf_warm", {
+        return { {
+            func = "perf_warm",
             limit = reload50_item_count,
             vsize = basic_item_size,
             prefix = "extstore",
             shuffle = true,
             flush_after = warm_write_rate,
             sleep = 100
-        } } }
+        } }
     end,
     f = function(r)
         local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload50_item_count, vsize = basic_item_size }

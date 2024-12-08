@@ -62,6 +62,11 @@ function perf_warm(a)
     local res = mcs.res_new()
     -- TODO: bother validating MN? this doesn't fail here.
     mcs.client_read(c, res)
+
+    -- allow a non-timed test to stop after this warmer completes.
+    if a.stop_after then
+        mcs.stop()
+    end
 end
 
 function perf_warm_cas(a)

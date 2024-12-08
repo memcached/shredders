@@ -27,7 +27,7 @@ local reload50_item_count = math.floor(basic_item_count * 0.56)
 local reload75_item_count = math.floor(basic_item_count * 0.82)
 local reload90_item_count = math.floor(basic_item_count * 0.96)
 
-local function go(r)
+local function go(r, time)
     local stats_arg = {
         stats = { "cmd_get", "cmd_set", "extstore_bytes_read", "extstore_objects_read", "extstore_objects_written", "miss_from_extstore", "slabs_moved" },
         track = { "extstore_bytes_written", "extstore_bytes_fragmented", "extstore_bytes_used", "extstore_io_queue", "extstore_page_allocs", "extstore_page_reclaims", "extstore_page_evictions", "extstore_pages_free", "evictions", "extstore_memory_pressure" }
@@ -43,7 +43,7 @@ local function go(r)
 
     -- grab stats snapshot before the server is stopped
     r:stats({ func = "full_stats", custom = true }, {})
-    r:shred()
+    r:shred(time)
 end
 
 local function start(a, b)
@@ -113,8 +113,10 @@ local test_reload50 = {
             -- halve the speed + smaller chunks
             flush_after = math.floor(warm_write_rate / 4),
             sleep = 50,
+            stop_after = true
         })
-        go(r)
+        -- run until the warmer finishes
+        go(r, 9999)
     end
 }
 

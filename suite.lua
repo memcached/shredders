@@ -25,7 +25,7 @@ end
 
 function _split_arg(a)
     local t = {}
-    for name in string.gmatch(a, '([^-]+)') do
+    for name in string.gmatch(a, '([^_]+)') do
         table.insert(t, name)
     end
     return t
@@ -69,34 +69,14 @@ function config(a)
         _TESTENV["debugbin"] = true
     end
 
-    if a["set"] ~= nil then
-        print("[init] overriding: test set")
-        o.set = _split_arghash(a["set"])
-    end
-    if a["pfx"] ~= nil then
-        print("[init] overriding: test prefix")
-        o.pfx = _split_arg(a["pfx"])
-    end
-    if a["test"] ~= nil then
-        print("[init] overriding: test")
-        o.test = _split_arghash(a["test"])
-    end
-    if a["keep"] ~= nil then
-        print("[init] keeping memcached running post-test")
-        o.keep = true
-    end
-    if a["backends"] ~= nil then
-        print("[init] overriding performance backend list")
-        o.backends = _split_arg(a["backends"])
-    end
-    if a["clients"] ~= nil then
-        print("[init] overriding performance clients list")
-        o.clients = _split_arg(a["clients"])
-    end
-    if a["extset"] ~= nil then
-        -- hope I can refactor these into a shared pattern soon...
-        print("[init] overriding extstore test list")
-        o.extset = _split_arg(a["extset"])
+    if a["filter"] ~= nil then
+        local list = _split_arg(a["filter"])
+        for i, name in ipairs(list) do
+            if string.find(name, "-", 1, true) then
+                list[i] = _split_arghash(name)
+            end
+        end
+        _TESTENV["filter"] = list
     end
 
     local threads = {}
@@ -185,7 +165,7 @@ local function ts_advance_test(tstack)
         return true
     else
         -- we've possibly walked back upwards to a point where there's no test
-        -- function, so we still stop processin ghere.
+        -- function, so we still stop processing here.
         return false
     end
 end
@@ -226,7 +206,7 @@ local function test_daemon_startup(start, stop)
     end
 end
 
-local function ts_name(tstack)
+local function ts_name_build(tstack)
     local n = {}
     for _, t in ipairs(tstack) do
         if t.n then
@@ -236,7 +216,34 @@ local function ts_name(tstack)
             table.insert(n, t[t.vn])
         end
     end
+    return n
+end
+
+local function ts_name(tstack)
+    local n = ts_name_build(tstack)
     return table.concat(n, "_")
+end
+
+local function ts_filter(tstack, filter)
+    local full = ts_name_build(tstack)
+
+    for i, t in ipairs(full) do
+        local f = filter[i]
+        plog("DEBUG", "ts_filter: comparing", t, f)
+        if type(f) == "string" then
+            if t == f then
+                plog("DEBUG", "ts_filter: matched from string", t, f)
+                return true
+            end
+        else -- table
+            if f[t] ~= nil then
+                plog("DEBUG", "ts_filter: matched from table", t, f)
+                return true
+            end
+        end
+    end
+
+    return false
 end
 
 -- TODO: allow dynamic path prefix via name?
@@ -336,10 +343,12 @@ function test_run_suite(suite, o)
     local top = dofile("./" .. suite .. "/tests.lua")
 
     local tstack = {top}
-    local mt = {advance = ts_advance_test,
+    local mt = {
+        advance = ts_advance_test,
         find = ts_find,
         name = ts_name,
         pop = ts_pop,
+        filter = ts_filter,
     }
     mt.__index = mt
     setmetatable(tstack, mt)
@@ -349,35 +358,41 @@ function test_run_suite(suite, o)
     local warm = nil
     -- loop while tests exist to run.
     while tstack:advance() do
-        local next_start = tstack:find("s")
-        if next_start ~= start then
-            local next_stop = tstack:find("e")
-            if next_stop == nil then
-                error("test must specify .e for ending a test")
+        if tstack:filter(_TESTENV["filter"]) then
+            local next_start = tstack:find("s")
+            if next_start ~= start then
+                local next_stop = tstack:find("e")
+                if next_stop == nil then
+                    error("test must specify .e for ending a test")
+                end
+                test_daemon_startup(next_start, stop)
+                start = next_start
+                stop = next_stop
             end
-            test_daemon_startup(next_start, stop)
-            start = next_start
-            stop = next_stop
-        end
 
-        local runner = test_wrapper_new(o, tstack)
-        local warmers = tstack:find("w")
-        if type(warmers) == "function" then
-            test_warm(o.warmthr, warmers(runner))
-        elseif warm ~= warmers then
-            test_warm(o.warmthr, warmers)
+            local runner = test_wrapper_new(o, tstack)
+            local warmers = tstack:find("w")
+            if type(warmers) == "function" then
+                test_warm(o.warmthr, warmers(runner))
+            elseif warm ~= warmers then
+                test_warm(o.warmthr, warmers)
+            else
+                plog("LOG", "INFO", "pre-warmed")
+            end
+
+            local f = tstack:find("f")
+            local t_name = tstack:name()
+            plog("START", tstack:name())
+            f(runner)
+            if runner:pending() then
+                plog("DEBUG", "running shred from pending work")
+                runner:shred()
+            end
+            tstack:pop()
         else
-            plog("LOG", "INFO", "pre-warmed")
+            plog("LOG", "INFO", "skipping", tstack:name())
+            tstack:pop()
         end
-
-        local f = tstack:find("f")
-        plog("START", tstack:name())
-        f(runner)
-        if runner:pending() then
-            plog("DEBUG", "running shred from pending work")
-            runner:shred()
-        end
-        tstack:pop()
     end
 
     if not o.keep and stop then

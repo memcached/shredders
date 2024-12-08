@@ -225,6 +225,9 @@ local function ts_name(tstack)
 end
 
 local function ts_filter(tstack, filter)
+    if filter == nil then
+        return true
+    end
     local full = ts_name_build(tstack)
 
     for i, t in ipairs(full) do

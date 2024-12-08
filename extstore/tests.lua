@@ -88,9 +88,40 @@ local test_basic = {
     end
 }
 
+local test_reload50 = {
+    n = "reload50",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    w = function(r)
+        return { { "perf_warm", {
+            limit = reload50_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload50_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload50_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            -- halve the speed + smaller chunks
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+        })
+        go(r)
+    end
+}
+
 return {
     e = stop(),
     t = {
         test_basic,
+        test_reload50,
     }
 }

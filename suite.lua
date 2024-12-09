@@ -305,8 +305,9 @@ local function test_wrapper_new(o, tstack)
             table.insert(d.work, {conf, args})
         end,
         shred = function(self, time)
-            if time == nil then
-                time = o.time
+            local duration = o.time
+            if time ~= nil then
+                duration = time
             end
             local all = {}
             -- gather any activated threads together.
@@ -315,7 +316,7 @@ local function test_wrapper_new(o, tstack)
             setup(all, o.maintthr, d.maint)
             setup(all, o.warmthr, d.warm)
             setup(all, o.testthr, d.work)
-            mcs.shredder(all, time)
+            mcs.shredder(all, duration)
             -- always wipe config stack for main test threads.
             d.work = {}
             d.warm = {}

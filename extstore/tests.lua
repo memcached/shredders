@@ -39,11 +39,11 @@ local function go(r, time)
     r:stats({ func = "perfrun_stats_gather", custom = true }, { threads = r:thread_count() })
 
     r:stats({ func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
-    r:shred()
+    r:shred(time)
 
     -- grab stats snapshot before the server is stopped
     r:stats({ func = "full_stats", custom = true }, {})
-    r:shred(time)
+    r:shred()
 end
 
 local function start(a, b)
@@ -122,10 +122,215 @@ local test_reload50 = {
     end
 }
 
+local test_reload75 = {
+    n = "reload75",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = reload75_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload75_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload75_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            -- halve the speed + smaller chunks
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
+local test_reload90 = {
+    n = "reload90",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload90_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            -- halve the speed + smaller chunks
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
+-- fill past eviction slowly
+local test_eviction = {
+    n = "reload90",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = basic_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = basic_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = basic_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore_eviction",
+            shuffle = false,
+            -- even slower, but we're trying to fill the disk all the way.
+            flush_after = math.floor(warm_write_rate / 10),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
+-- 90% reload, but we have the OLD bucket and plenty of extra space there
+local test_reloadold = {
+    n = "reloadold",
+    s = start(" -o ext_path=/extstore/extstore:25g,ext_path=/extstore/extold:25g:old"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload90_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore_old",
+            shuffle = true,
+            -- half the speed + smaller chunks.
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
+local test_reloadold = {
+    n = "reloadold",
+    s = start(" -o ext_path=/extstore/extstore:15g,ext_path=/extstore/extold:15g:old"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload90_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore_old",
+            shuffle = true,
+            -- half the speed + smaller chunks.
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
+local test_reloadcold = {
+    n = "reloadcold",
+    s = start(" -o ext_path=/extstore/extstore:25g,ext_path=/extstore/extold:25g:coldcompact"),
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore",
+            shuffle = true,
+            flush_after = warm_write_rate,
+            sleep = 100
+        } }
+    end,
+    f = function(r)
+        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload90_item_count, vsize = basic_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+
+        r:warm({ func = "perf_warm", custom = true }, {
+            limit = reload90_item_count,
+            vsize = basic_item_size,
+            prefix = "extstore_old",
+            shuffle = true,
+            -- half the speed + smaller chunks.
+            flush_after = math.floor(warm_write_rate / 4),
+            sleep = 50,
+            stop_after = true
+        })
+        -- run until the warmer finishes
+        go(r, 9999)
+    end
+}
+
 return {
     e = stop(),
     t = {
         test_basic,
         test_reload50,
+        test_reload75,
+        test_reload90,
+        test_eviction,
+        test_reloadold,
+        test_reloadcold,
     }
 }

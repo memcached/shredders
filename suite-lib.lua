@@ -65,6 +65,7 @@ function perf_warm(a)
 
     -- allow a non-timed test to stop after this warmer completes.
     if a.stop_after then
+        plog("LOG", "INFO", "warmer requesting stop")
         mcs.stop()
     end
 end

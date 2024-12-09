@@ -18,7 +18,9 @@ local base_arg = "-m 5000 -o no_hashexpand,hashpower=26,slab_automove_freeratio=
 
 local basic_fill_size = 28 * GByte
 local basic_item_size = 15 * KByte
+local small_item_size = 600
 local basic_item_count = math.floor(basic_fill_size / basic_item_size)
+local small_item_count = math.floor(basic_fill_size / small_item_size)
 
 -- the actual amounts are fudged higher because items take residence in both
 -- RAM + disk.
@@ -30,7 +32,7 @@ local reload90_item_count = math.floor(basic_item_count * 0.96)
 local function go(r, time)
     local stats_arg = {
         stats = { "cmd_get", "cmd_set", "extstore_bytes_read", "extstore_objects_read", "extstore_objects_written", "miss_from_extstore", "slabs_moved" },
-        track = { "extstore_bytes_written", "extstore_bytes_fragmented", "extstore_bytes_used", "extstore_io_queue", "extstore_page_allocs", "extstore_page_reclaims", "extstore_page_evictions", "extstore_pages_free", "evictions", "extstore_memory_pressure" }
+        track = { "extstore_bytes_written", "extstore_bytes_fragmented", "extstore_bytes_used", "extstore_io_queue", "extstore_page_allocs", "extstore_page_reclaims", "extstore_page_evictions", "extstore_pages_free", "evictions", "extstore_memory_pressure", "slab_global_page_pool" }
     }
 
     -- one set of funcs on each test thread that ships history
@@ -86,6 +88,18 @@ local test_basic = {
         r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.9, init = true }, a)
         r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.1, init = true }, a)
         go(r)
+    end
+}
+
+-- fill with small items for a while
+local test_small = {
+    n = "small",
+    s = start(" -o ext_path=/extstore/extstore:25g"),
+    f = function(r)
+        local a = { cli = 40, rate = 300000, prefix = "extstore", limit = small_item_count, vsize = small_item_size }
+        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.2, init = true }, a)
+        r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.8, init = true }, a)
+        go(r, 90)
     end
 }
 
@@ -326,6 +340,7 @@ return {
     e = stop(),
     t = {
         test_basic,
+        test_small,
         test_reload50,
         test_reload75,
         test_reload90,

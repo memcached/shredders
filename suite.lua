@@ -228,24 +228,30 @@ local function ts_filter(tstack, filter)
         return true
     end
     local full = ts_name_build(tstack)
+    local matches = 0
 
-    for i, t in ipairs(full) do
-        local f = filter[i]
+    for i, f in ipairs(filter) do
+        local t = full[i]
         plog("DEBUG", "ts_filter: comparing", t, f)
         if type(f) == "string" then
             if t == f then
-                plog("DEBUG", "ts_filter: matched from string", t, f)
-                return true
+                plog("DEBUG", "ts_filter: matched from string", i, t, f)
+                matches = matches + 1
             end
         else -- table
             if f[t] ~= nil then
-                plog("DEBUG", "ts_filter: matched from table", t, f)
-                return true
+                plog("DEBUG", "ts_filter: matched from table", i, t, f)
+                matches = matches + 1
             end
         end
     end
 
-    return false
+    -- ensure we get one match at each filter level
+    if matches == #filter then
+        return true
+    else
+        return false
+    end
 end
 
 -- TODO: allow dynamic path prefix via name?

@@ -23,12 +23,12 @@ function nodestop(host, sleep)
     end
 end
 
-function nodestart(host, arg, sleep)
+function nodestart(host, arg, sleep, debug)
     if TESTENV("external") then
         plog("LOG", "INFO", string.format("skipping node control: start %s %s", host, arg))
         return
     end
-    if TESTENV("debugbin") then
+    if TESTENV("debugbin") or debug then
         plog("LOG", "INFO", "nodectrl: debugbin", host, arg)
         nodectrl(string.format("startdbg %s %s", host, arg))
     else
@@ -38,6 +38,10 @@ function nodestart(host, arg, sleep)
     if sleep then
         os.execute("sleep " .. tostring(sleep))
     end
+end
+
+function nodestartdbg(host, arg, sleep)
+    nodestart(host, arg, sleep, true)
 end
 
 function nodeips()

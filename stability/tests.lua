@@ -94,7 +94,7 @@ local test_main = {
         local p = pfx(r)
         if w.main[p] then return nil end
         w.main[p] = true
-        return { { "stability_warm", { limit = main_keys, prefix = p, vsize = 100 } } }
+        return { { func = "stability_warm", limit = main_keys, prefix = p, vsize = 100 } }
     end,
     vn = "prefix",
     v = { "cluster", "ccluster", "wcluster", "wccluster", "wzone", "zone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewait", "onewaitfg", "internal" },
@@ -175,7 +175,7 @@ local test_main = {
           f = function(r)
             main.prefix = pfx(r)
             r:work({ func = "runner_metaset", clients = clients, rate_limit = 0 }, main)
-            r:work({ func = "runner_batchmetadelete", clients = 1, rate_limit = 0, init = true }, main)
+            r:work({ func = "runner_batchmetadelete", clients = 1, rate_limit = 0 }, main)
             go(r)
           end
         },

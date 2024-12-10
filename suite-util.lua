@@ -65,7 +65,7 @@ end
 
 -- https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console
 -- should probably get a really nice one of these for the library instead.
-local function dump(o)
+function dump(o)
    if type(o) == 'table' then
       local s = '{ '
       for k,v in pairs(o) do

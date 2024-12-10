@@ -99,7 +99,7 @@ local test_small = {
         local a = { cli = 40, rate = 300000, prefix = "extstore", limit = small_item_count, vsize = small_item_size }
         r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.2, init = true }, a)
         r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.8, init = true }, a)
-        go(r, 90)
+        go(r, 180)
     end
 }
 
@@ -270,8 +270,8 @@ local test_reloadold = {
     end
 }
 
-local test_reloadold = {
-    n = "reloadold",
+local test_evictionold = {
+    n = "evictionold",
     s = start(" -o ext_path=/extstore/extstore:15g,ext_path=/extstore/extold:15g:old"),
     w = function(r)
         return { {
@@ -346,6 +346,7 @@ return {
         test_reload90,
         test_eviction,
         test_reloadold,
+        test_evictionold,
         test_reloadcold,
     }
 }

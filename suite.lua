@@ -234,7 +234,10 @@ local function ts_filter(tstack, filter)
         local t = full[i]
         plog("DEBUG", "ts_filter: comparing", t, f)
         if type(f) == "string" then
-            if t == f then
+            if f == "any" then
+                plog("DEBUG", "ts_filter: matched from 'any' wildcard", i, t, f)
+                matches = matches + 1
+            elseif t == f then
                 plog("DEBUG", "ts_filter: matched from string", i, t, f)
                 matches = matches + 1
             end

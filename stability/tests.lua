@@ -374,7 +374,7 @@ return {
             nodestartdbg("mc-node" .. i .. mc_args)
         end
         -- start proxy node with config
-        nodestartdbg("mc-proxy -m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/proxy-stability.lua", 1)
+        nodestartdbg("mc-proxy", "-m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/proxy-stability.lua", 1)
     end,
     e = function()
         for i=1,3 do

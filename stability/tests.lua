@@ -378,9 +378,9 @@ return {
     end,
     e = function()
         for i=1,3 do
-            nodestop("stop mc-node" .. i)
+            nodestop("mc-node" .. i)
         end
-        nodestop("stop mc-proxy", 2)
+        nodestop("mc-proxy", 2)
     end,
     t = {
         test_main,

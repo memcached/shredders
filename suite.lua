@@ -238,11 +238,13 @@ local function ts_filter(tstack, filter)
                 plog("DEBUG", "ts_filter: matched from string", i, t, f)
                 matches = matches + 1
             end
-        else -- table
+        elseif type(f) == "table" then
             if f[t] ~= nil then
                 plog("DEBUG", "ts_filter: matched from table", i, t, f)
                 matches = matches + 1
             end
+        else
+            plog("ERROR", "ts_filter: unhanled filter subtype", type(f), i, t, f)
         end
     end
 

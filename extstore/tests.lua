@@ -103,6 +103,7 @@ local test_small = {
     end
 }
 
+-- TODO: can these be one test definition with a variance?
 local test_reload50 = {
     n = "reload50",
     s = start(" -o ext_path=/extstore/extstore:25g"),

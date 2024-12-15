@@ -50,6 +50,13 @@ local w = {
     fault = {}
 }
 
+-- ensure we begin with stopped instances
+-- note if "external" testenv is enabled these are rightfully no-ops.
+for i=1,3 do
+    nodestop("mc-node" .. i)
+end
+nodestop("mc-proxy", 2)
+
 -- TODO:
 -- ploss on mc-node1/2/3
 -- wccluster vs wcluster (n backends)

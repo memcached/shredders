@@ -67,8 +67,6 @@ end
 -- TODO: nodectrl to check-if-pid-running-then-etc
 nodestop("mc-extstore", 2)
 
--- TODO: small item test.
-
 local test_basic = {
     n = "basic",
     s = start(" -o ext_path=/extstore/extstore:25g"),
@@ -103,47 +101,24 @@ local test_small = {
     end
 }
 
--- TODO: can these be one test definition with a variance?
-local test_reload50 = {
-    n = "reload50",
-    s = start(" -o ext_path=/extstore/extstore:25g"),
-    w = function(r)
-        return { {
-            func = "perf_warm",
-            limit = reload50_item_count,
-            vsize = basic_item_size,
-            prefix = "extstore",
-            shuffle = true,
-            flush_after = warm_write_rate,
-            sleep = 100
-        } }
-    end,
-    f = function(r)
-        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload50_item_count, vsize = basic_item_size }
-        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
-
-        r:warm({ func = "perf_warm", custom = true }, {
-            limit = reload50_item_count,
-            vsize = basic_item_size,
-            prefix = "extstore",
-            shuffle = true,
-            -- halve the speed + smaller chunks
-            flush_after = math.floor(warm_write_rate / 4),
-            sleep = 50,
-            stop_after = true
-        })
-        -- run until the warmer finishes
-        go(r, 9999)
-    end
+-- Using an indirection for the item counts so we get nicer test names.
+local item_counts = {
+    ["50pct"] = reload50_item_count,
+    ["75pct"] = reload75_item_count,
+    ["90pct"] = reload90_item_count
 }
 
-local test_reload75 = {
-    n = "reload75",
+-- TODO: maybe some extra syntactic sugar for a variant test with a single
+-- subtest?
+local test_reload = {
+    n = "reload",
     s = start(" -o ext_path=/extstore/extstore:25g"),
+    vn = "itemcount",
+    v = { "50pct", "75pct", "90pct" },
     w = function(r)
         return { {
             func = "perf_warm",
-            limit = reload75_item_count,
+            limit = item_counts[r:key("itemcount")],
             vsize = basic_item_size,
             prefix = "extstore",
             shuffle = true,
@@ -151,61 +126,32 @@ local test_reload75 = {
             sleep = 100
         } }
     end,
-    f = function(r)
-        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload75_item_count, vsize = basic_item_size }
-        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
+    -- have to organize the test as sub-tests since we're using a variant
+    t = {
+        { n = "load", f = function(r)
+            local a = { cli = 25, rate = 25000, prefix = "extstore", limit = item_counts[r:key("itemcount")], vsize = basic_item_size }
+            r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
 
-        r:warm({ func = "perf_warm", custom = true }, {
-            limit = reload75_item_count,
-            vsize = basic_item_size,
-            prefix = "extstore",
-            shuffle = true,
-            -- halve the speed + smaller chunks
-            flush_after = math.floor(warm_write_rate / 4),
-            sleep = 50,
-            stop_after = true
-        })
-        -- run until the warmer finishes
-        go(r, 9999)
-    end
-}
-
-local test_reload90 = {
-    n = "reload90",
-    s = start(" -o ext_path=/extstore/extstore:25g"),
-    w = function(r)
-        return { {
-            func = "perf_warm",
-            limit = reload90_item_count,
-            vsize = basic_item_size,
-            prefix = "extstore",
-            shuffle = true,
-            flush_after = warm_write_rate,
-            sleep = 100
-        } }
-    end,
-    f = function(r)
-        local a = { cli = 25, rate = 25000, prefix = "extstore", limit = reload90_item_count, vsize = basic_item_size }
-        r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate, init = true }, a)
-
-        r:warm({ func = "perf_warm", custom = true }, {
-            limit = reload90_item_count,
-            vsize = basic_item_size,
-            prefix = "extstore",
-            shuffle = true,
-            -- halve the speed + smaller chunks
-            flush_after = math.floor(warm_write_rate / 4),
-            sleep = 50,
-            stop_after = true
-        })
-        -- run until the warmer finishes
-        go(r, 9999)
-    end
+            r:warm({ func = "perf_warm", custom = true }, {
+                limit = item_counts[r:key("itemcount")],
+                vsize = basic_item_size,
+                prefix = "extstore",
+                shuffle = true,
+                -- halve the speed + smaller chunks
+                flush_after = math.floor(warm_write_rate / 4),
+                sleep = 50,
+                stop_after = true
+            })
+            -- run until the warmer finishes
+            go(r, 9999)
+        end
+        }
+    }
 }
 
 -- fill past eviction slowly
 local test_eviction = {
-    n = "reload90",
+    n = "eviction",
     s = start(" -o ext_path=/extstore/extstore:25g"),
     w = function(r)
         return { {
@@ -342,9 +288,7 @@ return {
     t = {
         test_basic,
         test_small,
-        test_reload50,
-        test_reload75,
-        test_reload90,
+        test_reload,
         test_eviction,
         test_reloadold,
         test_evictionold,

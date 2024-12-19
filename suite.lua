@@ -10,7 +10,6 @@ function help()
         time (30) (how long to run each sub test)
         threads (5) (number of mcshredder threads for test load)
         suite (nil) (override the test suite to run)
-        keep (false) (whether ot leave memcached's running after stability test)
         backends (list) ('-' separated list of perf. test proxy configs to run)
         clients (list) ('-' separated list of perf. test client configs to run)
         set (list) ('-' separated list of stability test sets to run)
@@ -51,7 +50,6 @@ function config(a)
     local o = {
         threads = 5,
         time = 30,
-        keep = false, -- whether or not to leave mc running post-test.
     }
     if a["threads"] ~= nil then
         print("[init] overriding: test threadcount")
@@ -107,24 +105,48 @@ local function ts_advance_test(tstack)
     -- iterate the variant if we're not currently looping the test.
     plog("DEBUG", "ts:advance() -> before top.v")
     if not top.__ti and top.v then
-        if top.__vi then
-            top.__vi = top.__vi + 1
-        else
-            top.__vi = 1
-        end
+        if type(top.v) == "table" then
+            if top.__vi then
+                top.__vi = top.__vi + 1
+            else
+                top.__vi = 1
+            end
+            plog("DEBUG", "ts:advance() -> top.v as table", type(top.__vi))
 
-        local nv = top.v[top.__vi]
-        if nv then
-            -- accessory name for the variant
-            if top.vn then
-                -- FIXME: add a prefix?
-                top[top.vn] = nv
+            local nv = top.v[top.__vi]
+            if nv then
+                -- accessory name for the variant
+                if top.vn then
+                    -- FIXME: add a prefix?
+                    top[top.vn] = nv
+                end
+            else
+                -- no more variants, pop and recurse.
+                top.__vi = nil
+                table.remove(tstack)
+                return tstack:advance()
+            end
+        elseif type(top.v) == "function" then
+            if top.__vi == nil then
+                -- TODO: some way of combining stack args might be nice
+                top.__vi = shallow_copy(top.a)
+            end
+            local name, nv = top.v(top.__vi)
+            plog("DEBUG", "ts:advance() -> top.v as func", type(top.__vi), type(nv))
+
+            if nv == nil then
+                top.__vi = nil
+                table.remove(tstack)
+                return tstack:advance()
+            else
+                if top.vn then
+                    -- unpack the name from the variant return.
+                    top[top.vn] = name
+                    top.__vi = nv
+                end
             end
         else
-            -- no more variants, pop and recurse.
-            top.__vi = nil
-            table.remove(tstack)
-            return tstack:advance()
+            error("variant of unknown type")
         end
     end
     plog("DEBUG", "ts:advance() -> after top.v")
@@ -174,25 +196,26 @@ local function ts_pop(tstack)
 end
 
 local function ts_find(tstack, key)
-    --plog("DEBUG", "ts_find", type(tstack), key)
+    plog("DEBUG", "ts_find", type(tstack), key)
     for i=#tstack, 1, -1 do
-        --plog("DEBUG", "ts_find loop", type(tstack), i, key)
+        plog("DEBUG", "ts_find loop", type(tstack), i, key)
         local v = rawget(tstack[i], key)
         if v then
+            plog("DEBUG", "ts_find found", type(tstack), i, key)
             return v
         end
     end
 end
 
 -- TODO: mcshredder methods for testing when ports become alive/etc.
-local function test_daemon_startup(start, stop)
+local function test_daemon_startup(r, start, stop)
     if stop ~= nil then
         plog("LOG", "INFO", "stopping previous test daemon")
         if type(stop) == "string" then
             nodectrl(stop)
             os.execute("sleep 8")
         else
-            stop()
+            stop(r)
         end
     end
 
@@ -201,7 +224,7 @@ local function test_daemon_startup(start, stop)
         nodectrl(start)
         os.execute("sleep 2")
     else
-        start()
+        return start(r)
     end
 end
 
@@ -345,6 +368,9 @@ local function test_wrapper_new(o, tstack)
         key = function(self, k)
             return tstack:find(k)
         end,
+        variant = function(self)
+            return tstack:find('__vi')
+        end,
     }
 
     w.__index = w
@@ -367,24 +393,60 @@ function test_run_suite(suite, o)
     mt.__index = mt
     setmetatable(tstack, mt)
 
+    plog("LOG", "INFO", "running node stops before beginning test run")
+    local pre_stop = tstack:find("e")
+    if pre_stop == nil then
+        error("test must specify .e for ending a test")
+    end
+    if type(pre_stop) == "string" then
+        nodectrl(pre_stop)
+        os.execute("sleep 8")
+    else
+        pre_stop()
+    end
+
     local start = nil
+    local start_key = nil
+    local start_cur = nil
     local stop = nil
     local warm = nil
     -- loop while tests exist to run.
     while tstack:advance() do
         if tstack:filter(_TESTENV["filter"]) then
+            local runner = test_wrapper_new(o, tstack)
             local next_start = tstack:find("s")
+            local next_stop = tstack:find("e")
+            if next_stop == nil then
+                error("test must specify .e for ending a test")
+            end
             if next_start ~= start then
-                local next_stop = tstack:find("e")
-                if next_stop == nil then
-                    error("test must specify .e for ending a test")
+                -- if the start function changes, issue a stop/start
+                local res = test_daemon_startup(runner, next_start, stop)
+                if res then
+                    start_key = res
+                    start_cur = tstack:find(start_key)
+                else
+                    start_key = nil
+                    start_cur = nil
                 end
-                test_daemon_startup(next_start, stop)
-                start = next_start
+
                 stop = next_stop
+                start = next_start
+            elseif start_key then
+                -- else our start function is tracking a key change and
+                -- restarting then.
+                local k = tstack:find(start_key)
+                plog("DEBUG", "checking start key", start_key, k)
+                if k ~= start_cur then
+                    local res = test_daemon_startup(runner, next_start, stop)
+                    if res then
+                        start_key = res
+                        start_cur = tstack:find(start_key)
+                    end
+                    stop = next_stop
+                end
             end
 
-            local runner = test_wrapper_new(o, tstack)
             local warmers = tstack:find("w")
             if type(warmers) == "function" then
                 test_warm(o.warmthr, warmers(runner))
@@ -409,7 +471,7 @@ function test_run_suite(suite, o)
         end
     end
 
-    if not o.keep and stop then
+    if not _TESTENV["external"] and stop then
         if type(stop) == "string" then
             nodectrl(stop)
             os.execute("sleep 8")

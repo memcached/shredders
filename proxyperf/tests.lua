@@ -31,6 +31,16 @@ local rate_variant = function(a)
     return tostring(a.rate), a
 end
 
+local rate_cli_variant = function(a)
+    a.rate = a.rate + a.raise
+    a.cli = a.cli + 80
+    if a.rate > a.cap then
+        return nil
+    end
+    -- name for the test name, and the arg struct
+    return tostring(a.rate), a
+end
+
 -- MAYBE:
 -- v = function()
 -- a = arg cluster
@@ -49,7 +59,53 @@ local test_lowclients = {
             r:work({ func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true}, o)
             go(r)
         end
-        }
+        },
+    }
+}
+
+local test_lowpipe = {
+    n = "lowpipe",
+    vn = "rate",
+    a = { rate = 50000, raise = 50000, cli = 20, pipes = 8, cap = 500000, limit = KEY_LIMIT },
+    v = rate_variant,
+    t = {
+        { n = "load", f = function(r)
+            local o = r:variant()
+            r:work({ func = "perfrun_metaget_pipe", clients = o.cli, rate_limit = o.rate, init = true}, o)
+            go(r)
+        end
+        },
+    }
+}
+
+local test_highclients = {
+    n = "highclients",
+    vn = "rate",
+    a = { rate = 10000, raise = 50000, cli = 40, cap = 800000, limit = KEY_LIMIT },
+    v = rate_cli_variant,
+    t = {
+        { n = "load", f = function(r)
+            local o = r:variant()
+            r:work({ func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate, init = true}, o)
+            go(r)
+        end
+        },
+    }
+}
+
+local test_lowgetset = {
+    n = "lowgetset",
+    vn = "rate",
+    a = { rate = 5000, raise = 25000, cli = 20, cap = 500000, limit = KEY_LIMIT },
+    v = rate_variant,
+    t = {
+        { n = "load", f = function(r)
+            local o = r:variant()
+            r:work({ func = "perfrun_metaget", clients = o.cli, rate_limit = o.rate * 0.9, init = true}, o)
+            r:work({ func = "perfrun_metaset", clients = o.cli, rate_limit = o.rate * 0.1, init = true}, o)
+            go(r)
+        end
+        },
     }
 }
 
@@ -91,5 +147,8 @@ return {
     v = { "lowbe", "highbe", "beconn", "repl", "replsplit", "router" },
     t = {
         test_lowclients,
+        test_lowpipe,
+        test_highclients,
+        test_lowgetset,
     }
 }

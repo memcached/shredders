@@ -16,6 +16,10 @@ local function go(r, p)
     r:stats({ func = "proxy_stat_sample", clients = 1, rate_limit = 1 }, pstats_arg)
     r:stats({ func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
     r:shred()
+
+    -- grab stats snapshot before the server is stopped
+    r:stats({ func = "full_stats", custom = true }, {})
+    r:shred()
 end
 
 local rate_variant = function(a)
@@ -80,7 +84,7 @@ return {
             func = "perf_warm",
             limit = KEY_LIMIT,
             vsize = 50,
-            prefix = "perf",
+            prefix = "perf/",
         } }
     end,
     vn = "backend",

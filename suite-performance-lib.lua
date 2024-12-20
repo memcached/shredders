@@ -151,7 +151,7 @@ end
 
 function perfrun_metaget(a)
     local total_keys = a.limit
-    local pfx = "perf"
+    local pfx = "perf/"
     if a.prefix then
         pfx = a.prefix
     end
@@ -182,7 +182,7 @@ function perfrun_metaget_pipe(a)
     local pipes = a.pipes
     local reqfacs = {}
     local results = {}
-    local pfx = "perf"
+    local pfx = "perf/"
     if a.prefix then
         pfx = a.prefix
     end
@@ -216,7 +216,7 @@ end
 function perfrun_metaset(a)
     local total_keys = a.limit
     local size = a.vsize
-    local pfx = "perf"
+    local pfx = "perf/"
     if a.prefix then
         pfx = a.prefix
     end
@@ -246,7 +246,7 @@ end
 function perfrun_metacasset(a)
     local total_keys = a.limit
     local size = a.vsize
-    local pfx = "perf"
+    local pfx = "perf/"
     if a.prefix then
         pfx = a.prefix
     end

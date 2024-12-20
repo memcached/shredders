@@ -88,7 +88,7 @@ return {
         } }
     end,
     vn = "backend",
-    v = { "lowbe", "highbe", "beconn", "repl", "replsplit" },
+    v = { "lowbe", "highbe", "beconn", "repl", "replsplit", "router" },
     t = {
         test_lowclients,
     }

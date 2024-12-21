@@ -110,9 +110,9 @@ local test_lowgetset = {
 }
 
 local w = {}
-local s = {}
 
-return {
+local bare_tests = {
+    n = "bare",
     -- to ensure the start is run once per "backend"
     -- we have to override how often the start code is run
     s = function(r)
@@ -124,12 +124,6 @@ return {
 
         -- tell caller to track for this key changing
         return "backend"
-    end,
-    e = function()
-        for i=1,3 do
-            nodestop("mc-node" .. i)
-        end
-        nodestop("mc-proxy", 2)
     end,
     w = function(r)
         -- run warmer once per backend
@@ -150,5 +144,71 @@ return {
         test_lowpipe,
         test_highclients,
         test_lowgetset,
+    }
+}
+
+local function pfx(r)
+    return string.format("%s/", r:key("prefix"))
+end
+
+local rlib_arg = {
+    get_rate = 100000,
+    set_rate = 20000,
+    cli = 50,
+    limit = KEY_LIMIT,
+    vsize = 50,
+    prefix = "placeholder"
+}
+
+local rlib_basic = {
+    n = "basic",
+    prefix = "basic",
+    f = function(r)
+        local o = r:key("arg")
+        r:work({ func = "perfrun_metaget", clients = o.cli, rate_limit = o.get_rate, init = true}, o)
+        r:work({ func = "perfrun_metaset", clients = o.cli, rate_limit = o.set_rate, init = true}, o)
+        go(r)
+    end
+}
+
+-- test routelib specifically since larger configurations cause lua to do
+-- weird things, plus this is the supported public interface anyway.
+-- NOTE: scalability tests aren't as interesting as perf deltas between
+-- different features, I think?
+-- capacity tests might be nice or rate climbers but only for specific
+-- scenarios.
+local routelib_tests = {
+    n = "routelib",
+    arg = rlib_arg,
+    s = function(r)
+        local mc_args = " -m 6000 -t 2 -I 4m"
+        for i=1,3 do
+            nodestart("mc-node" .. i, mc_args)
+        end
+        nodestart("mc-proxy", "-m 2000 -t 6 -o proxy_config=routelib,proxy_arg=/home/ubuntu/conf/proxyperf/proxy-performance-routelib.lua", 1)
+    end,
+    w = function(r)
+        return { {
+            func = "perf_warm",
+            limit = KEY_LIMIT,
+            vsize = 50,
+            prefix = pfx(r)
+        } }
+    end,
+    t = {
+        rlib_basic,
+    }
+}
+
+return {
+    e = function()
+        for i=1,3 do
+            nodestop("mc-node" .. i)
+        end
+        nodestop("mc-proxy", 2)
+    end,
+    t = {
+        bare_tests,
+        routelib_tests,
     }
 }

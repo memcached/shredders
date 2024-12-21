@@ -1,6 +1,27 @@
 local NODE_IPS = { '10.191.24.56', '10.191.24.4', '10.191.24.178' }
 local PORT = 11211
 
+-- return nodes in a routelib format
+function nodes_rlib()
+    local b = {}
+    for i=1,3 do
+        local ip = NODE_IPS[i]
+        table.insert(b, {
+            host = ip,
+            port = PORT,
+        })
+    end
+    return b
+end
+
+function node_rlib(i)
+    local b = {}
+    local ip = NODE_IPS[i]
+    b.host = ip
+    b.port = PORT
+    return b
+end
+
 function nodes_flat()
     local srv = mcp.backend
     local b = {}

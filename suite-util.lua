@@ -49,6 +49,12 @@ function nodeips()
 end
 
 function plog(...)
+    local first = ...
+    if type(first) == "string" and first == "DEBUG" then
+        if not _TESTENV["debug"] then
+            return
+        end
+    end
     io.write(os.date("%a %b %e %H:%M:%S | "))
     io.write(table.concat({...}, " | "))
     io.write("\n")

@@ -9,14 +9,18 @@ function help()
     local msg =[[
         time (30) (how long to run each sub test)
         threads (5) (number of mcshredder threads for test load)
-        suite (nil) (override the test suite to run)
-        backends (list) ('-' separated list of perf. test proxy configs to run)
-        clients (list) ('-' separated list of perf. test client configs to run)
-        set (list) ('-' separated list of stability test sets to run)
-        pfx (list) ('-' separated list of stability proxy backend prefixes to run)
-        test (list) ('-' separated list of stability sub-tests to run)
+        suite (nil) (base test suite to run)
+        filter (nil) (filter which tests to run)
+        debug (false) (extra debug output from test suite)
+        external (false) (user manually manages memcached daemons)
+        debugbin (false) (always use memcached debug binary)
 
-        see suite-*-.lua files for the various default lists.
+        filter examples:
+        Test name ex: routelib_fallback_basic
+        Filter: routelib (runs all routelib_* tests)
+                routelib_fallback (runs all routelib_fallback_* tests)
+                routelib_fallback-allsync_basic (runs basic subtest from just two prior subtests)
+                routelib_any_basic (run the basic subtest from any middle tests)
     ]]
     print(msg)
 end
@@ -37,7 +41,7 @@ function _split_arghash(a)
     return t
 end
 
-local _TESTENV = {
+_TESTENV = {
 
 }
 -- query the test environment?
@@ -64,6 +68,9 @@ function config(a)
     end
     if a["debugbin"] ~= nil then
         _TESTENV["debugbin"] = true
+    end
+    if a["debug"] ~= nil then
+        _TESTENV["debug"] = true
     end
 
     if a["filter"] ~= nil then

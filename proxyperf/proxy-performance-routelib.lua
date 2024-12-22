@@ -9,11 +9,15 @@ settings{
     active_req_limit = 200000
 }
 
+-- TODO:
+-- at least a couple tests with the bg thread
+-- add cmap and test (basic get/set or ma?)
+-- mcp.internal tests
 pools{
     basic = {
         backends = nodes_rlib()
     },
-    highconn = {
+    highbeconn = {
         backend_options = { connections = 8 },
         backends = nodes_rlib()
     },
@@ -32,7 +36,7 @@ pools{
 routes{
     map = {
         basic = route_direct{ child = "basic" },
-        highconn = route_direct{ child = "highconn" },
+        highbeconn = route_direct{ child = "highbeconn" },
         allfastest = cmdmap{
             all = route_allfastest{
                 children = "set_all"

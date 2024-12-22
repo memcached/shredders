@@ -195,6 +195,8 @@ local routelib_tests = {
             prefix = pfx(r)
         } }
     end,
+    vn = "prefix",
+    v = { "basic", "highbeconn", "allfastest", "allsync", "zfailover", "fallback" },
     t = {
         rlib_basic,
     }

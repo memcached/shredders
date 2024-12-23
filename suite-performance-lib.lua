@@ -9,6 +9,12 @@ local PERFRUN_MSHIST <const> = 4
 local PERFRUN_OOB <const> = 5
 perfrun_stats = {}
 
+-- used to avoid any leftover data from corrupting the next test.
+function perfrun_stats_clear()
+    plog("PERFRUN", "clearing stats counters")
+    perfrun_stats = nil
+end
+
 -- run one of these on each thread issuing performance tests. gathers the time
 -- history once per second and ships it for summarization.
 function perfrun_stats_out()

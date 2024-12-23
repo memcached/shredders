@@ -19,6 +19,7 @@ local function go(r, p)
 
     -- grab stats snapshot before the server is stopped
     r:stats({ func = "full_stats", custom = true }, {})
+    r:stats({ func = "perfrun_stats_clear", custom = true }, {})
     r:shred()
 end
 

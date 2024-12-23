@@ -162,9 +162,9 @@ local rlib_arg = {
 
 local rlib_basic = {
     n = "basic",
-    prefix = "basic",
     f = function(r)
         local o = r:key("arg")
+        o.prefix = pfx(r)
         r:work({ func = "perfrun_metaget", clients = o.cli, rate_limit = o.get_rate, init = true}, o)
         r:work({ func = "perfrun_metaset", clients = o.cli, rate_limit = o.set_rate, init = true}, o)
         go(r)

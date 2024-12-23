@@ -315,8 +315,13 @@ local function test_wrapper_new(o, tstack)
         if #confs then
             for _, a in ipairs(confs) do
                 if a[1].custom then
-                    -- FIXME: cope if thread is singular or not
-                    mcs.add_custom(thr, a[1], a[2])
+                    if type(thr) == "userdata" then
+                        mcs.add_custom(thr, a[1], a[2])
+                    else
+                        for _, v in pairs(thr) do
+                            mcs.add_custom(v, a[1], a[2])
+                        end
+                    end
                 else
                     mcs.add(thr, a[1], a[2])
                 end

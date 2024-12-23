@@ -146,6 +146,10 @@ function perfrun_stats_gather(a)
 
             -- reset local stats cache.
             lstats = {}
+
+            if a.once then
+                return
+            end
         end
     end
 end

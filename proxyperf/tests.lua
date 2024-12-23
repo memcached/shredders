@@ -11,15 +11,17 @@ local stats_arg = {
 }
 
 local function go(r, p)
-    r:work({ func = "perfrun_stats_out", rate_limit = 1, clients = 1 })
-    r:stats({ func = "perfrun_stats_gather", custom = true }, { threads = r:thread_count() })
+    --r:work({ func = "perfrun_stats_out", rate_limit = 1, clients = 1 })
     r:stats({ func = "proxy_stat_sample", clients = 1, rate_limit = 1 }, pstats_arg)
     r:stats({ func = "stat_sample", clients = 1, rate_limit = 1 }, stats_arg)
     r:shred()
 
     -- grab stats snapshot before the server is stopped
     r:stats({ func = "full_stats", custom = true }, {})
-    r:stats({ func = "perfrun_stats_clear", custom = true }, {})
+    r:work({ func = "perfrun_stats_out", rate_limit = 1, clients = 1, custom = true })
+    r:stats({ func = "perfrun_stats_gather", custom = true }, { threads = r:thread_count(), once = true })
+    -- TODO: mode switch for doing per-second histogram output
+    --r:stats({ func = "perfrun_stats_clear", custom = true }, {})
     r:shred()
 end
 

@@ -39,6 +39,17 @@ function perfrun_stats_out()
     mcs.out(t)
 end
 
+local function get_percentile(stats, total, percentile)
+    local sum = 0
+    local target = (percentile/100) * total
+    for i=1,#stats do
+        sum = sum + stats[i]
+        if sum > target then
+            return i
+        end
+    end
+end
+
 -- run on separate stats thread. waits for data from test runner threads,
 -- summarizes and prints.
 function perfrun_stats_gather(a)
@@ -72,7 +83,6 @@ function perfrun_stats_gather(a)
             for num in string.gmatch(rline, '([^,]+)') do
                 s[i] = s[i] + tonumber(num)
                 i = i + 1
-                plog("HISTOGRAM", i, num)
             end
         end
 
@@ -81,27 +91,48 @@ function perfrun_stats_gather(a)
         if tcount == a.threads then
             -- seen all threads, dump data.
             tcount = 0
+            -- FIXME: precalc the labels or do it differently :)
+            local labels = {}
             for cmd, s in pairs(lstats) do
+                local total = 0
+                for i=1,PERFRUN_END do
+                    total = total + s[i]
+                end
+                local percentile = get_percentile(s, total, 99)
+
                 plog("TIMER", cmd)
                 plog("TIME", "1us", s[PERFRUN_HIST])
+                labels[PERFRUN_HIST] = "1us"
                 for i=1,10 do
-                    if s[PERFRUN_TUSHIST+i] > 0 then
-                        plog("TIME", i .. "0us", s[PERFRUN_TUSHIST+i])
+                    local c = s[PERFRUN_TUSHIST+i]
+                    if c > 0 then
+                        labels[PERFRUN_TUSHIST+i] = i .. "0us"
+                        plog("TIME", i .. "0us", c,
+                            string.format("%.2f%%", (c / total)*100))
                     end
                 end
                 for i=1,10 do
-                    if s[PERFRUN_HUSHIST+i] > 0 then
-                        plog("TIME", i .. "00us", s[PERFRUN_HUSHIST+i])
+                    local c = s[PERFRUN_HUSHIST+i]
+                    if c > 0 then
+                        labels[PERFRUN_HUSHIST+i] = i .. "00us"
+                        plog("TIME", i .. "00us", c,
+                            string.format("%.2f%%", (c / total)*100))
                     end
                 end
                 for i=1,100 do
-                    if s[PERFRUN_MSHIST+i] > 0 then
-                        plog("TIME", i .. "ms", s[PERFRUN_MSHIST+i])
+                    local c = s[PERFRUN_MSHIST+i]
+                    if c > 0 then
+                        labels[PERFRUN_MSHIST+i] = i .. "ms"
+                        plog("TIME", i .. "ms", c,
+                            string.format("%.2f%%", (c / total)*100))
                     end
                 end
                 if s[PERFRUN_OOB] ~= 0 then
-                    plog("TIME", "100ms+:", s[PERFRUN_OOB])
+                    labels[PERFRUN_OOB+i] = "100ms+"
+                    plog("TIME", "100ms+:", s[PERFRUN_OOB],
+                            string.format("%.2f%%", (s[PERFRUN_OOB] / total)*100))
                 end
+                plog("PERCENTILE", "99th", labels[percentile])
                 plog("ENDTIMER")
             end
 

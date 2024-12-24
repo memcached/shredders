@@ -4,9 +4,10 @@
 
 local PERFRUN_HIST <const> = 1
 local PERFRUN_TUSHIST <const> = 2 -- tens of us
-local PERFRUN_HUSHIST <const> = 3 -- hundreds of us
-local PERFRUN_MSHIST <const> = 4
-local PERFRUN_OOB <const> = 5
+local PERFRUN_HUSHIST <const> = 13 -- hundreds of us
+local PERFRUN_MSHIST <const> = 24
+local PERFRUN_OOB <const> = 125
+local PERFRUN_END <const> = 125
 perfrun_stats = {}
 
 -- used to avoid any leftover data from corrupting the next test.
@@ -22,19 +23,13 @@ function perfrun_stats_out()
 
     for cmd, stats in pairs(perfrun_stats) do
         table.insert(t, cmd)
-        local hist = stats[PERFRUN_HIST]
-        table.insert(t, table.concat(hist, ","))
+        table.insert(t, table.concat(stats, ","))
 
-        local tushist = stats[PERFRUN_TUSHIST]
-        table.insert(t, table.concat(tushist, ","))
-
-        local hushist = stats[PERFRUN_HUSHIST]
-        table.insert(t, table.concat(hushist, ","))
-
-        local mshist = stats[PERFRUN_MSHIST]
-        table.insert(t, table.concat(mshist, ","))
-
-        table.insert(t, stats[PERFRUN_OOB])
+        -- zero out the stats instead of throwing away the table to reduce GC
+        -- pressure, since we need to init them regardless.
+        for i=1,PERFRUN_END do
+            stats[i] = 0
+        end
     end
     if #t == 1 then
         return -- nothing to send right now.
@@ -42,10 +37,6 @@ function perfrun_stats_out()
 
     table.insert(t, "===end===")
     mcs.out(t)
-
-    -- TODO: zero out the stats instead of wipe them to cut memory churn
-    -- slightly.
-    perfrun_stats = {}
 end
 
 -- run on separate stats thread. waits for data from test runner threads,
@@ -74,41 +65,15 @@ function perfrun_stats_gather(a)
             end
             local s = lstats[rline]
 
-            -- the next line is us histogram
-            -- then tens/hundreds of us histograms
-            -- the line after that is ms chart
-            -- final line os OOB count
+            -- the next line is the histogram.
 
             rline = mcs.out_readline()
             local i = 1
             for num in string.gmatch(rline, '([^,]+)') do
-                s[PERFRUN_HIST][i] = s[PERFRUN_HIST][i] + tonumber(num)
+                s[i] = s[i] + tonumber(num)
                 i = i + 1
+                plog("HISTOGRAM", i, num)
             end
-
-            rline = mcs.out_readline()
-            local i = 1
-            for num in string.gmatch(rline, '([^,]+)') do
-                s[PERFRUN_TUSHIST][i] = s[PERFRUN_TUSHIST][i] + tonumber(num)
-                i = i + 1
-            end
-
-            rline = mcs.out_readline()
-            local i = 1
-            for num in string.gmatch(rline, '([^,]+)') do
-                s[PERFRUN_HUSHIST][i] = s[PERFRUN_HUSHIST][i] + tonumber(num)
-                i = i + 1
-            end
-
-            rline = mcs.out_readline()
-            i = 1
-            for num in string.gmatch(rline, '([^,]+)') do
-                s[PERFRUN_MSHIST][i] = s[PERFRUN_MSHIST][i] + tonumber(num)
-                i = i + 1
-            end
-
-            rline = mcs.out_readline()
-            s[PERFRUN_OOB] = s[PERFRUN_OOB] + tonumber(rline)
         end
 
         tcount = tcount + 1
@@ -117,25 +82,21 @@ function perfrun_stats_gather(a)
             -- seen all threads, dump data.
             tcount = 0
             for cmd, s in pairs(lstats) do
-                local timer_hist = s[PERFRUN_HIST]
-                local timer_tushist = s[PERFRUN_TUSHIST]
-                local timer_hushist = s[PERFRUN_HUSHIST]
-                local timer_mshist = s[PERFRUN_MSHIST]
                 plog("TIMER", cmd)
-                plog("TIME", "1us", timer_hist[1])
+                plog("TIME", "1us", s[PERFRUN_HIST])
                 for i=1,10 do
-                    if timer_tushist[i] > 0 then
-                        plog("TIME", i .. "0us", timer_tushist[i])
+                    if s[PERFRUN_TUSHIST+i] > 0 then
+                        plog("TIME", i .. "0us", s[PERFRUN_TUSHIST+i])
                     end
                 end
                 for i=1,10 do
-                    if timer_hushist[i] > 0 then
-                        plog("TIME", i .. "00us", timer_hushist[i])
+                    if s[PERFRUN_HUSHIST+i] > 0 then
+                        plog("TIME", i .. "00us", s[PERFRUN_HUSHIST+i])
                     end
                 end
                 for i=1,100 do
-                    if timer_mshist[i] > 0 then
-                        plog("TIME", i .. "ms", timer_mshist[i])
+                    if s[PERFRUN_MSHIST+i] > 0 then
+                        plog("TIME", i .. "ms", s[PERFRUN_MSHIST+i])
                     end
                 end
                 if s[PERFRUN_OOB] ~= 0 then
@@ -161,22 +122,11 @@ function perfrun_init()
 end
 
 function perfrun_init_bucket_cmd()
-    local stats = { {}, {}, {}, {}, 0}
-    -- seed this command bucket.
-    for i=1,2 do
-        table.insert(stats[PERFRUN_HIST], 0)
+    local stats = {}
+    for i=1,PERFRUN_END do
+        table.insert(stats, 0)
     end
 
-    for i=1,10 do
-        table.insert(stats[PERFRUN_TUSHIST], 0)
-    end
-    for i=1,10 do
-        table.insert(stats[PERFRUN_HUSHIST], 0)
-    end
-
-    for i=1,100 do
-        table.insert(stats[PERFRUN_MSHIST], 0)
-    end
     return stats
 end
 
@@ -195,16 +145,16 @@ function perfrun_bucket(cmd, time)
     elseif bucket > 3 then
         -- per ms granulairty
         bucket = m.floor(time / 1000)
-        stats[PERFRUN_MSHIST][bucket] = stats[PERFRUN_MSHIST][bucket] + 1
+        stats[PERFRUN_MSHIST + bucket] = stats[PERFRUN_MSHIST + bucket] + 1
     elseif bucket == 3 then
         bucket = m.floor(time / 100)
-        stats[PERFRUN_HUSHIST][bucket] = stats[PERFRUN_HUSHIST][bucket] + 1
+        stats[PERFRUN_HUSHIST + bucket] = stats[PERFRUN_HUSHIST + bucket] + 1
     elseif bucket == 2 then
         bucket = m.floor(time / 10)
-        stats[PERFRUN_TUSHIST][bucket] = stats[PERFRUN_TUSHIST][bucket] + 1
+        stats[PERFRUN_TUSHIST + bucket] = stats[PERFRUN_TUSHIST + bucket] + 1
     else
         -- histogram for sub-ms
-        stats[PERFRUN_HIST][bucket] = stats[PERFRUN_HIST][bucket] + 1
+        stats[PERFRUN_HIST + bucket] = stats[PERFRUN_HIST + bucket] + 1
     end
 end
 

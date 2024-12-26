@@ -154,6 +154,9 @@ local function pfx(r)
     return string.format("%s/", r:key("prefix"))
 end
 
+-- NOTE: these tests give worse timings than the main tests since the number
+-- of clients is higher. need some closer apples/apples with and without
+-- routelib tests.
 local rlib_arg = {
     get_rate = 100000,
     set_rate = 20000,

@@ -235,31 +235,31 @@ local test_bwlimit = {
         {
             n = "getters",
             f = function(r)
-                nodectrl("bwlimit mc-proxy");
+                nodectrl("bwlimit mc-proxy")
                 bwlimit.prefix = pfx(r)
                 r:work({ func = "runner_metaget", clients = clients, rate_limit = 0, init = true}, bwlimit)
                 go(r)
-                nodectrl("nobwlimit mc-proxy");
+                nodectrl("nobwlimit mc-proxy")
             end
         },
         {
             n = "setters",
             f = function(r)
-                nodectrl("bwlimit mc-proxy");
+                nodectrl("bwlimit mc-proxy")
                 bwlimit.prefix = pfx(r)
                 r:work({ func = "runner_metaset", clients = clients, rate_limit = 0}, bwlimit)
-                go(a)
-                nodectrl("nobwlimit mc-proxy");
+                go(r)
+                nodectrl("nobwlimit mc-proxy")
             end
         },
         {
             n = "multiget",
             f = function(r)
-                nodectrl("bwlimit mc-proxy");
+                nodectrl("bwlimit mc-proxy")
                 bwlimit.prefix = pfx(r)
                 r:work({ func = "runner_multiget", clients = clients, rate_limit = 0 }, bwlimit)
                 go(r)
-                nodectrl("nobwlimit mc-proxy");
+                nodectrl("nobwlimit mc-proxy")
                 -- throw a small value test immediately after the bandwidth
                 -- limiter to confirm if memory usage clears.
                 local second_args = { total_keys = bwlimit.total_keys, vsize = 100, ttl = 0 }

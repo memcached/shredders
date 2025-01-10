@@ -128,7 +128,7 @@ function perfrun_stats_gather(a)
                     end
                 end
                 if s[PERFRUN_OOB] ~= 0 then
-                    labels[PERFRUN_OOB+i] = "100ms+"
+                    labels[PERFRUN_OOB] = "100ms+"
                     plog("TIME", "100ms+:", s[PERFRUN_OOB],
                             string.format("%.2f%%", (s[PERFRUN_OOB] / total)*100))
                 end

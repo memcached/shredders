@@ -13,7 +13,7 @@ local stat_arg = {
 local statm_conf = { func = "stat_sample", clients = 1, rate_limit = 1 }
 local statm_arg = {
     stats = { "proxy_conn_requests", "total_connections" },
-    track = { "proxy_req_active", "proxy_await_active", "read_buf_count", "read_buf_bytes", "read_buf_bytes_free", "response_obj_count", "curr_connections" }
+    track = { "proxy_req_active", "proxy_request_failed_depth", "read_buf_count", "read_buf_bytes", "read_buf_bytes_free", "response_obj_count", "curr_connections" }
 }
 local statpf_conf = { func = "proxyfuncs_stat_sample", clients = 1, rate_limit = 1 }
 

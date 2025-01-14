@@ -1,7 +1,7 @@
 local bwlimit_keys = 500
 local main_keys = 1000000
 local clients = 20
-local client_high = clients * 20
+local clients_high = clients * 20
 
 local timer_conf = { func = "timer_metaget", clients = 8, rate_limit = 500, init = true }
 local timer_display = { func = "timer_display", clients = 1, rate_limit = 1, init = true }

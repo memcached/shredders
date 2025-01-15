@@ -278,7 +278,7 @@ function mcp_config_routes(conf)
         ["onewaitwc"] = f_onewaitwc,
         ["onewait"] = f_onewait,
         ["onewaitfg"] = f_onewaitfg,
-        ["internal"] = new_basic_factory({ list = { mcp.internal_backend }, name = "internal" }, direct_gen),
+        ["internal"] = new_basic_factory({ list = { mcp.internal_handler }, name = "internal" }, direct_gen),
     }
 
     local default = new_basic_factory({ msg = "SERVER_ERROR no route\r\n" }, string_gen)

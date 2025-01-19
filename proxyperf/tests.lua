@@ -84,7 +84,7 @@ local test_lowpipe = {
 local test_highpipe = {
     n = "highpipe",
     vn = "rate",
-    a = { rate = 3000, raise = 3000, cli = 24, pipes = 128, cap = 30000, limit = KEY_LIMIT },
+    a = { rate = 5000, raise = 5000, cli = 24, pipes = 128, cap = 50000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)

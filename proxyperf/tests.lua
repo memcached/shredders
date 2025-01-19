@@ -6,7 +6,7 @@ local pstats_arg = {
     track = { "vm_memory_kb", "buffer_memory_used" }
 }
 local stats_arg = {
-    stats = { "proxy_conn_requests" },
+    stats = { "proxy_conn_requests", "cmd_get", "cmd_set" },
     track = { "rusage_user", "rusage_system", "proxy_req_active" }
 }
 
@@ -69,7 +69,7 @@ local test_lowclients = {
 local test_lowpipe = {
     n = "lowpipe",
     vn = "rate",
-    a = { rate = 50000, raise = 50000, cli = 24, pipes = 8, cap = 500000, limit = KEY_LIMIT },
+    a = { rate = 50000, raise = 50000, cli = 24, pipes = 8, cap = 400000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -84,7 +84,7 @@ local test_lowpipe = {
 local test_highpipe = {
     n = "highpipe",
     vn = "rate",
-    a = { rate = 2000, raise = 2000, cli = 24, pipes = 128, cap = 20000, limit = KEY_LIMIT },
+    a = { rate = 3000, raise = 3000, cli = 24, pipes = 128, cap = 30000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -99,7 +99,7 @@ local test_highpipe = {
 local test_highclients = {
     n = "highclients",
     vn = "rate",
-    a = { rate = 10000, raise = 50000, cli = 48, cap = 800000, limit = KEY_LIMIT },
+    a = { rate = 50000, raise = 50000, cli = 48, cap = 800000, limit = KEY_LIMIT },
     v = rate_cli_variant,
     t = {
         { n = "load", f = function(r)
@@ -114,7 +114,7 @@ local test_highclients = {
 local test_lowgetset = {
     n = "lowgetset",
     vn = "rate",
-    a = { rate = 5000, raise = 25000, cli = 24, cap = 500000, limit = KEY_LIMIT },
+    a = { rate = 50000, raise = 50000, cli = 24, cap = 500000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -156,7 +156,7 @@ local bare_tests = {
         } }
     end,
     vn = "backend",
-    v = { "lowbe", "highbe", "beconn", "repl", "replsplit", "router" },
+    v = { "lowbe", "highbe", "beconn", "repl", "replsplit", "router", "int", "bypass" },
     t = {
         test_lowclients,
         test_lowpipe,

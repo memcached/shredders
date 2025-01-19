@@ -52,7 +52,7 @@ end
 
 function config(a)
     local o = {
-        threads = 5,
+        threads = 6,
         time = 30,
     }
     if a["threads"] ~= nil then

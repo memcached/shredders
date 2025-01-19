@@ -98,7 +98,10 @@ function perfrun_stats_gather(a)
                 for i=1,PERFRUN_END do
                     total = total + s[i]
                 end
-                local percentile = get_percentile(s, total, 99)
+                local p99 = get_percentile(s, total, 99)
+                local p95 = get_percentile(s, total, 95)
+                local p90 = get_percentile(s, total, 90)
+                local p50 = get_percentile(s, total, 50)
 
                 plog("TIMER", cmd)
                 plog("TIME", "1us", s[PERFRUN_HIST])
@@ -132,7 +135,10 @@ function perfrun_stats_gather(a)
                     plog("TIME", "100ms+:", s[PERFRUN_OOB],
                             string.format("%.2f%%", (s[PERFRUN_OOB] / total)*100))
                 end
-                plog("PERCENTILE", "99th", labels[percentile])
+                plog("PERCENTILE", "50th", labels[p50])
+                plog("PERCENTILE", "90th", labels[p90])
+                plog("PERCENTILE", "95th", labels[p95])
+                plog("PERCENTILE", "99th", labels[p99])
                 plog("ENDTIMER")
             end
 

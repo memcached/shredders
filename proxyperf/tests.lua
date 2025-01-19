@@ -36,7 +36,7 @@ end
 
 local rate_cli_variant = function(a)
     a.rate = a.rate + a.raise
-    a.cli = a.cli + 80
+    a.cli = a.cli + 48
     if a.rate > a.cap then
         return nil
     end
@@ -54,7 +54,7 @@ end
 local test_lowclients = {
     n = "lowclients",
     vn = "rate",
-    a = { rate = 50000, raise = 50000, cli = 20, cap = 500000, limit = KEY_LIMIT },
+    a = { rate = 50000, raise = 50000, cli = 24, cap = 500000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -69,7 +69,22 @@ local test_lowclients = {
 local test_lowpipe = {
     n = "lowpipe",
     vn = "rate",
-    a = { rate = 50000, raise = 50000, cli = 20, pipes = 8, cap = 500000, limit = KEY_LIMIT },
+    a = { rate = 50000, raise = 50000, cli = 24, pipes = 8, cap = 500000, limit = KEY_LIMIT },
+    v = rate_variant,
+    t = {
+        { n = "load", f = function(r)
+            local o = r:variant()
+            r:work({ func = "perfrun_metaget_pipe", clients = o.cli, rate_limit = o.rate, init = true}, o)
+            go(r)
+        end
+        },
+    }
+}
+
+local test_highpipe = {
+    n = "highpipe",
+    vn = "rate",
+    a = { rate = 2000, raise = 2000, cli = 24, pipes = 128, cap = 20000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -84,7 +99,7 @@ local test_lowpipe = {
 local test_highclients = {
     n = "highclients",
     vn = "rate",
-    a = { rate = 10000, raise = 50000, cli = 40, cap = 800000, limit = KEY_LIMIT },
+    a = { rate = 10000, raise = 50000, cli = 48, cap = 800000, limit = KEY_LIMIT },
     v = rate_cli_variant,
     t = {
         { n = "load", f = function(r)
@@ -99,7 +114,7 @@ local test_highclients = {
 local test_lowgetset = {
     n = "lowgetset",
     vn = "rate",
-    a = { rate = 5000, raise = 25000, cli = 20, cap = 500000, limit = KEY_LIMIT },
+    a = { rate = 5000, raise = 25000, cli = 24, cap = 500000, limit = KEY_LIMIT },
     v = rate_variant,
     t = {
         { n = "load", f = function(r)
@@ -145,6 +160,7 @@ local bare_tests = {
     t = {
         test_lowclients,
         test_lowpipe,
+        test_highpipe,
         test_highclients,
         test_lowgetset,
     }
@@ -191,7 +207,7 @@ local routelib_tests = {
         for i=1,3 do
             nodestart("mc-node" .. i, mc_args)
         end
-        nodestart("mc-proxy", "-m 2000 -t 6 -o proxy_config=routelib,proxy_arg=/home/ubuntu/conf/proxyperf/proxy-performance-routelib.lua", 1)
+        nodestart("mc-proxy", "-m 2000 -R 200 -t 6 -o proxy_config=routelib,proxy_arg=/home/ubuntu/conf/proxyperf/proxy-performance-routelib.lua", 1)
     end,
     w = function(r)
         return { {

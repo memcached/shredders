@@ -156,7 +156,7 @@ local bare_tests = {
         } }
     end,
     vn = "backend",
-    v = { "lowbe", "highbe", "beconn", "repl", "replsplit", "router", "int", "bypass" },
+    v = { "lowbe", "highbe", "beconn", "iothr", "repl", "replsplit", "router", "int", "bypass" },
     t = {
         test_lowclients,
         test_lowpipe,

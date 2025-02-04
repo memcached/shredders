@@ -101,10 +101,16 @@ local test_main = {
         local p = pfx(r)
         if w.main[p] then return nil end
         w.main[p] = true
+        if p == "/internalext/" then
+            -- we fast-flush everything over 1k so this test stresses the extstore
+            -- + lua internal combination
+            print("INTERNAL EXTSTORE WARM OVERRIDE")
+            return { { func = "stability_warm", limit = (main_keys / 10), prefix = p, vsize = 1500 } }
+        end
         return { { func = "stability_warm", limit = main_keys, prefix = p, vsize = 100 } }
     end,
     vn = "prefix",
-    v = { "cluster", "ccluster", "wcluster", "wccluster", "wzone", "zone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewait", "onewaitfg", "internal" },
+    v = { "cluster", "ccluster", "wcluster", "wccluster", "wzone", "zone", "zonegood", "wzonegood", "subcluster", "subwcluster", "onewaitwc", "onewait", "onewaitfg", "internalold", "internal", "internalext" },
     t = {
         { n = "getters",
           f = function(r)
@@ -381,7 +387,7 @@ return {
             nodestartdbg("mc-node" .. i .. mc_args)
         end
         -- start proxy node with config
-        nodestartdbg("mc-proxy", "-m 2000 -t 6 -o proxy_config=/home/ubuntu/conf/stability/proxy-stability.lua", 1)
+        nodestartdbg("mc-proxy", "-m 2000 -o ext_path=/dev/shm/extstore:2G,ext_item_age=0,ext_item_size=1000 -t 6 -o proxy_config=/home/ubuntu/conf/stability/proxy-stability.lua", 1)
     end,
     e = function()
         for i=1,3 do

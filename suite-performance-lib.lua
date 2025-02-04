@@ -251,7 +251,7 @@ function perfrun_metaget_pipe(a)
             mcs.read(res)
             local status, elapsed = mcs.match(reqfacs[i], res)
             if not status then
-                print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+                print("mismatched response: " .. i .. " GOT: " .. mcs.resline(res))
             end
 
             perfrun_bucket("mg", elapsed)

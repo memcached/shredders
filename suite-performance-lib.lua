@@ -261,7 +261,6 @@ end
 
 function perfrun_metaset(a)
     local total_keys = a.limit
-    local size = a.vsize
     local pfx = "perf/"
     if a.prefix then
         pfx = a.prefix
@@ -274,18 +273,40 @@ function perfrun_metaset(a)
     local req = mcs.ms_factory(pfx, flags)
     perfrun_init()
 
-    return function()
-        local num = math.random(total_keys)
-        mcs.write_factory(req, num, size)
-        mcs.flush()
+    if a.vsize then
+        local size = a.vsize
+        return function()
+            local num = math.random(total_keys)
+            mcs.write_factory(req, num, size)
+            mcs.flush()
 
-        mcs.read(res)
-        local status, elapsed = mcs.match(req, res)
-        if not status then
-            print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+            mcs.read(res)
+            local status, elapsed = mcs.match(req, res)
+            if not status then
+                print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+            end
+
+            perfrun_bucket("ms", elapsed)
         end
+    elseif a.vsize_min and a.vsize_max then
+        local min = a.vsize_min
+        local max = a.vsize_max
+        return function()
+            local num = math.random(total_keys)
+            local size = math.random(min, max)
+            mcs.write_factory(req, num, size)
+            mcs.flush()
 
-        perfrun_bucket("ms", elapsed)
+            mcs.read(res)
+            local status, elapsed = mcs.match(req, res)
+            if not status then
+                print("mismatched response: " .. num .. " GOT: " .. mcs.resline(res))
+            end
+
+            perfrun_bucket("ms", elapsed)
+        end
+    else
+        error("perfrun_metaset must have vsize or vsize_min/vsize_max")
     end
 end
 

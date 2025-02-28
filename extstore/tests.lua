@@ -18,9 +18,10 @@ local base_arg = "-m 5000 -o no_hashexpand,hashpower=26,slab_automove_freeratio=
 
 local basic_fill_size = 28 * GByte
 local basic_item_size = 15 * KByte
-local small_item_size = 600
+local small_item_size = 250
+local small_item_size_max = 600
 local basic_item_count = math.floor(basic_fill_size / basic_item_size)
-local small_item_count = math.floor(basic_fill_size / small_item_size)
+local small_item_count = math.floor(basic_fill_size / small_item_size_max)
 
 -- the actual amounts are fudged higher because items take residence in both
 -- RAM + disk.
@@ -92,9 +93,10 @@ local test_basic = {
 -- fill with small items for a while
 local test_small = {
     n = "small",
-    s = start(" -o ext_path=/extstore/extstore:25g"),
+    s = start(" -o ext_path=/extstore/extstore:25g,ext_item_size=350"),
     f = function(r)
-        local a = { cli = 40, rate = 300000, prefix = "extstore", limit = small_item_count, vsize = small_item_size }
+        local p = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        local a = { cli = 40, rate = 300000, prefix = "extstore" .. p, limit = small_item_count, vsize_min = small_item_size, vsize_max = small_item_size_max }
         r:work({ func = "perfrun_metaget", clients = a.cli, rate_limit = a.rate * 0.2, init = true }, a)
         r:work({ func = "perfrun_metaset", clients = a.cli, rate_limit = a.rate * 0.8, init = true }, a)
         go(r, 180)

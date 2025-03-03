@@ -93,7 +93,7 @@ local test_basic = {
 -- fill with small items for a while
 local test_small = {
     n = "small",
-    s = start(" -o ext_path=/extstore/extstore:25g,ext_item_size=350"),
+    s = start(" -f 1.06 -o ext_path=/extstore/extstore:25g,ext_item_size=350,slab_chunk_max=2"),
     f = function(r)
         local p = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         local a = { cli = 40, rate = 300000, prefix = "extstore" .. p, limit = small_item_count, vsize_min = small_item_size, vsize_max = small_item_size_max }

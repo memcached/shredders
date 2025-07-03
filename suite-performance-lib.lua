@@ -201,8 +201,16 @@ function perfrun_metaget(a)
     if a.prefix then
         pfx = a.prefix
     end
+    local flags = "v"
+    if a.flags then
+        if type(a.flags) == "table" then
+            flags = table.concat(a.flags, " ")
+        else
+            flags = a.flags
+        end
+    end
     local res = mcs.res_new()
-    local req = mcs.mg_factory(pfx, "v")
+    local req = mcs.mg_factory(pfx, flags)
     -- NOTE: this ends up resetting the global values a bunch of times, but we
     -- need to ensure we do it once to clear any data from a previous run.
     -- All of the inits run before any actual test code so this is fine.
@@ -232,10 +240,18 @@ function perfrun_metaget_pipe(a)
     if a.prefix then
         pfx = a.prefix
     end
+    local flags = "v"
+    if a.flags then
+        if type(a.flags) == "table" then
+            flags = table.concat(a.flags, " ")
+        else
+            flags = a.flags
+        end
+    end
 
     for i=1,pipes do
         table.insert(results, mcs.res_new())
-        table.insert(reqfacs, mcs.mg_factory(pfx, "v"))
+        table.insert(reqfacs, mcs.mg_factory(pfx, flags))
     end
     perfrun_init()
 

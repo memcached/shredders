@@ -186,7 +186,7 @@ local test_fetchers = {
 return {
     s = function()
         -- TODO: remove dbg to test actual performance.
-        nodestart("mc-memory", "-c 250000 -t 6 -m 40000", 1)
+        nodestart("mc-memory", "-c 250000 -t 6 -m 4000", 1)
     end,
     e = function()
         nodestop("mc-memory", 2)

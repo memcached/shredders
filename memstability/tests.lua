@@ -29,6 +29,8 @@ local stats_arg = {
         "auth_errors",
         "conn_yields",
         "slabs_moved",
+        "slab_reassign_busy_items",
+        "slab_reassign_busy_nomem",
         "lru_maintainer_juggles",
         "total_items",
         "evictions",
@@ -50,7 +52,10 @@ local stats_arg = {
         "read_buf_oom",
         "hash_power_level",
         "curr_items",
-        "slab_global_page_pool"
+        "slab_global_page_pool",
+        "slab_reassign_running",
+        "slabs_moved",
+        "slab_reassign_last_busy_status"
     }
 }
 -- TODO: 5-10/s per server thread?
@@ -88,14 +93,28 @@ local test_get = {
     end
 }
 
+local test_bigval = {
+    n = "bigval",
+    f = function(r)
+        r:work({ func = "runner_metaset_variable", clients = 4, rate_limit = 10 },
+            { prefix = "/bigval/mbvar", total_keys = 4000, sizemin = (MByte * 8), sizemax = (MByte * 16), ttl = 999999 })
+
+        r:work({ func = "runner_metaget", clients = 20, rate_limit = 0, init = true },
+            { prefix = "/bigval/mbvar", total_keys = 4000 })
+        r:stats({ func = "runner_slab_reassign", custom = true }, { min = 1, max = 38, source = 39, loops = 60 })
+        go(r)
+    end
+}
+
 return {
     s = function()
-        nodestartdbg("mc-memory", "-c 250000 -t 6 -m 40000", 1)
+        nodestartdbg("mc-memory", "-c 250000 -t 6 -m 4000 -I 30m", 1)
     end,
     e = function()
         nodestop("mc-memory", 2)
     end,
     t = {
-        test_get
+        test_get,
+        test_bigval
     }
 }

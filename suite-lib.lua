@@ -129,6 +129,43 @@ function perf_warm_cas(a)
 end
 
 --
+-- UTIL
+--
+
+-- slab reassign torture tester
+function runner_slab_reassign(a)
+    local c = mcs.client_new({})
+    if c == nil or mcs.client_connect(c) == false then
+        print("ERROR: runner_slab_reassign failed to connect to host")
+        return
+    end
+
+    while true do
+        local slab_dest = math.random(a.min, a.max)
+        mcs.client_write(c, string.format("slabs reassign %d %d\r\n",
+            a.source, slab_dest))
+        mcs.client_flush(c)
+
+        local line = mcs.client_readline(c)
+        if line == false or line == nil then
+            print("runner_slab_reassign disconnected")
+            return
+        else
+            plog("SLAB_REASSIGN", line)
+        end
+
+        if a.loops then
+            a.loops = a.loops - 1
+            if a.loops == 0 then
+                return
+            end
+        end
+
+        mcs.sleep_millis(1000)
+    end
+end
+
+--
 -- STATS DISPLAY
 --
 

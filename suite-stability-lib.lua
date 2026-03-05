@@ -333,6 +333,7 @@ function runner_watcher(a)
     end
     if mcs.client_connect(c) == false then
         print("ERROR: runner_watcher failed to connect")
+        return
     end
 
     mcs.client_write(c, "watch " .. a.watchers .. "\r\n")
